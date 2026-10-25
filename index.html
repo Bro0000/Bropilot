@@ -6,7 +6,7 @@
 <title>Administrador · Barbería</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js';document.head.appendChild(s)"></script>
 <style>
 :root{--bg:#F3F5F8;--sf:#fff;--ink:#12202F;--mu:#5B6B7C;--ln:#D8DEE5;--rd:#C8102E;--bl:#1F4E8C;--ok:#1B7F4B;color-scheme:light;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -114,7 +114,8 @@ cur=c;sel=-1;drawPan()};
 var stream=null,raf=0,lastBad=0;
 function stopCam(){cancelAnimationFrame(raf);if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}$("vd").style.display="none"}
 $("bc").onclick=function(){
-if(!navigator.mediaDevices||typeof jsQR==="undefined"){toast("La cámara no está disponible aquí. Escribe el ID.");return}
+if(!navigator.mediaDevices){toast("Este navegador no permite usar la cámara. Escribe el ID.");return}
+if(typeof jsQR==="undefined"){toast("No cargó el lector de QR. Revisa tu conexión y recarga.");return}
 navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}}).then(function(st){
 stream=st;var v=$("vd");v.srcObject=st;v.style.display="block";v.onclick=stopCam;v.play();
 var cv=$("cv2"),cx=cv.getContext("2d");
