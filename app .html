@@ -1,0 +1,157 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tarjeta de fidelidad</title>
+<style>
+:root{--bg:#efeeea;--c:#fff;--t:#1b1b1d;--r:#a3162a;--m:#6d6d72;--l:#d9d8d3}
+@media(prefers-color-scheme:dark){:root{--bg:#111113;--c:#1c1c1f;--t:#f1f1f1;--m:#9b9ba1;--l:#343438}}
+*{box-sizing:border-box}body{margin:0;font:16px/1.4 -apple-system,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--t)}
+main{max-width:460px;margin:auto;padding:16px}
+.card{background:var(--c);border:1px solid var(--l);border-radius:14px;padding:16px;margin-bottom:12px;position:relative}
+input,select,textarea{width:100%;padding:12px;margin:4px 0 10px;border:1px solid var(--l);border-radius:10px;font:inherit;background:var(--bg);color:var(--t)}
+button,.b{display:block;width:100%;padding:13px;border:0;border-radius:10px;background:var(--r);color:#fff;font:inherit;font-weight:600;margin:6px 0;text-align:center;text-decoration:none}
+button.s{background:var(--l);color:var(--t)}button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(--r);outline-offset:2px}
+.bar{height:12px;background:var(--l);border-radius:6px;position:relative;margin:10px 0}.bar i{display:block;height:100%;background:var(--r);border-radius:6px}
+.bar u{position:absolute;top:-3px;width:2px;height:18px;background:var(--t)}
+.n{font-size:52px;font-weight:800;line-height:1}.m{color:var(--m);font-size:14px}
+nav{display:flex;gap:4px;margin-bottom:12px}nav button{margin:0;padding:10px 2px;font-size:13px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--l)}
+.emo{position:absolute;top:10px;right:14px;font-size:24px}.qr{width:150px;margin:12px auto;background:#fff;padding:8px;border-radius:8px}
+</style>
+<script>function L(u,f){var s=document.createElement('script');s.src=u;s.onerror=f;document.head.appendChild(s)}
+L('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js',function(){L('https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js')});
+L('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js')</script></head>
+<body><main id="v"><p class="m">Cargando…</p></main>
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import{getFirestore,doc,getDoc,setDoc,onSnapshot,collection,query,orderBy,limit,writeBatch,getDocs,where,deleteField}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+const app=initializeApp({
+apiKey:"AIzaSyAJ382B7G2sZjhXg2OB1fzJVioQn7sMGbk",
+authDomain:"adminbr0.firebaseapp.com",
+projectId:"adminbr0",
+storageBucket:"adminbr0.firebasestorage.app",
+messagingSenderId:"206654267138",
+appId:"1:206654267138:web:bfe2c122dab56e004c2c1b"}),auth=getAuth(app),db=getFirestore(app);
+const ADMIN='adminbrob@gmail.com',$=s=>document.querySelector(s),P=new URLSearchParams(location.search),V=$('#v');
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const EMO=['✂️💈','🎃💀','🎄🎅','🔥💪','🏆⚽','🇲🇽🦅','❤️✂️','☀️😎'];
+const D0={aviso:'',emo:EMO[0],wa:'',waMsg:'Hola, quiero agendar una cita',ig:'',fb:'',precios:{'Corte':150,'Barba':100,'Ceja':50,'Corte y barba':230,'Corte, barba y ceja':270}};
+const cfgRef=doc(db,'config','main'),URLB=location.origin+location.pathname;
+const mk=()=>[...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,'0')).join('');
+async function getCfg(){try{const s=await getDoc(cfgRef);return{...D0,...(s.exists()?s.data():{})}}catch(e){return D0}}
+const okWa=w=>/^\d{10,15}$/.test(w),okIg=i=>/^[A-Za-z0-9._]{1,30}$/.test(i),okFb=f=>/^https:\/\/(www\.)?(facebook|fb)\.com\/[^\s"'<>]*$/.test(f);
+let CL=[],cf=D0;
+
+/* ---------- Tarjeta del cliente ---------- */
+function card(c,vs,f,tok){
+ const n=c.n||0,nx=n<4?5:n<9?10:null;
+ const msg=n==4?'¡Tu próxima visita tiene 20% de descuento!':n==9?'¡Tu próxima visita tiene 50% de descuento!':`Tu siguiente descuento: visita ${nx} (${nx==5?'20%':'50%'})`;
+ let qr='';try{const q=qrcode(0,'M');q.addData(URLB+'?c='+tok);q.make();qr=`<div class="qr">${q.createSvgTag(4,0)}</div>`}catch(e){}
+ const links=[];
+ if(okWa(f.wa))links.push(`<a class="b" rel="noopener" target="_blank" href="https://wa.me/${f.wa}?text=${encodeURIComponent(f.waMsg||'')}">Agendar por WhatsApp</a>`);
+ if(f.ig&&okIg(f.ig))links.push(`<a class="b s" rel="noopener" target="_blank" href="https://instagram.com/${f.ig}">Instagram @${esc(f.ig)}</a>`);
+ if(f.fb&&okFb(f.fb))links.push(`<a class="b s" rel="noopener" target="_blank" href="${esc(f.fb)}">Facebook</a>`);
+ const cyc=vs[0]&&vs[0].num==10&&n==0?'<p><b>¡Ciclo completado! Empiezas de nuevo en 0/10.</b></p>':'';
+ return`<div class="card"><span class="emo">${esc(f.emo)}</span><div style="text-align:center;padding-top:20px"><p class="m">Tarjeta de</p><h2 style="margin:0">${esc(c.nombre)}</h2>
+ <div class="n">${n}/10</div><div class="bar" role="img" aria-label="${n} de 10 visitas"><i style="width:${n*10}%"></i><u style="left:50%"></u><u style="right:0"></u></div>
+ <p class="m">Descuento en la visita 5 (20%) y en la 10 (50%)</p><p><b>${msg}</b></p>${cyc}${qr}</div>
+ ${f.aviso?`<p class="card" style="margin:8px 0">${esc(f.aviso)}</p>`:''}
+ <p class="m" style="margin:10px 0 0">Últimas visitas</p>${vs.map(v=>`<div class="row"><span>${new Date(v.t).toLocaleDateString('es-MX')} · ${esc(v.serv)}</span><span>${v.desc?v.desc*100+'%':''}</span></div>`).join('')||'<p class="m">Aún no tienes visitas.</p>'}</div>${links.join('')}`}
+async function clientView(tok){
+ const f=await getCfg();let c=null,vs=[],ready=false;
+ const r=()=>{V.innerHTML=c?card(c,vs,f,tok):ready?'<div class="card">No encontramos esta tarjeta. Pide tu enlace al barbero.</div>':''};
+ onSnapshot(doc(db,'clientes',tok),s=>{c=s.exists()?s.data():null;ready=true;r()},()=>{ready=true;r()});
+ onSnapshot(query(collection(db,'clientes',tok,'visitas'),orderBy('t','desc'),limit(5)),s=>{vs=s.docs.map(d=>d.data());r()},()=>{})}
+
+/* ---------- Inscripción pública ---------- */
+function altaView(){
+ if(localStorage.mi)return location.replace('?c='+localStorage.mi);
+ V.innerHTML=`<div class="card"><h2>Crea tu tarjeta de fidelidad</h2><label for="nm">Nombre</label><input id="nm" maxlength="60" autocomplete="name"><label for="tl">Teléfono</label><input id="tl" type="tel" maxlength="20" autocomplete="tel">
+ <p class="m">Usamos tu nombre y teléfono solo para tu tarjeta y para avisarte de promociones. Puedes pedir que los borremos cuando quieras.</p>
+ <label><input type="checkbox" id="ok" style="width:auto;margin-right:8px">Acepto el aviso de privacidad</label><button id="go">Crear mi tarjeta</button><p id="er" class="m" role="alert"></p></div>`;
+ $('#go').onclick=async()=>{const nombre=$('#nm').value.trim(),tel=$('#tl').value.trim(),er=$('#er');
+  if(!nombre||!/^[0-9+ ()-]{8,20}$/.test(tel))return er.textContent='Escribe tu nombre y un teléfono válido.';
+  if(!$('#ok').checked)return er.textContent='Marca la casilla para aceptar el aviso.';
+  $('#go').disabled=true;const tok=mk();
+  try{await setDoc(doc(db,'clientes',tok),{nombre,tel,n:0,alta:Date.now()});localStorage.mi=tok;location.replace('?c='+tok)}catch(e){er.textContent='No se pudo crear la tarjeta. Intenta de nuevo.';$('#go').disabled=false}}}
+
+/* ---------- Administrador ---------- */
+function login(){
+ V.innerHTML=`<div class="card"><h2>Administrador</h2><input id="em" type="email" aria-label="Correo" value="${ADMIN}"><input id="pw" type="password" aria-label="Contraseña" placeholder="Contraseña"><button id="go">Entrar</button><p id="er" class="m" role="alert"></p></div>`;
+ $('#go').onclick=()=>signInWithEmailAndPassword(auth,$('#em').value.trim(),$('#pw').value).catch(()=>$('#er').textContent='Correo o contraseña incorrectos.')}
+async function admin(){cf=await getCfg();CL=(await getDocs(collection(db,'clientes'))).docs.map(d=>({id:d.id,...d.data()}));tab('r')}
+const TB=[['r','Registrar'],['c','Clientes'],['s','Resumen'],['p','Precios'],['d','Tarjeta']];
+const ofl=()=>{const e=$('#of');if(e)e.style.display=navigator.onLine?'none':'block'};addEventListener('online',ofl);addEventListener('offline',ofl);
+function tab(t){
+ V.innerHTML=`<div id="of" class="m" style="display:none;color:var(--r)" role="alert">Sin conexión: no registres visitas hasta que regrese.</div><nav>${TB.map(([k,n])=>`<button class="${k==t?'':'s'}" data-t="${k}">${n}</button>`).join('')}<button class="s" id="so">Salir</button></nav><div id="b"></div>`;
+ document.querySelectorAll('[data-t]').forEach(x=>x.onclick=()=>tab(x.dataset.t));$('#so').onclick=()=>signOut(auth);
+ ({r:regTab,c:cliTab,s:resTab,p:prTab,d:cfgTab})[t]();ofl()}
+function regTab(){
+ $('#b').innerHTML=`<button id="sc">Escanear QR</button><input id="q" placeholder="Buscar por nombre o teléfono" aria-label="Buscar cliente"><div id="ls"></div><button class="s" id="nw">Nuevo cliente</button><div id="pn"></div>`;
+ $('#q').oninput=()=>{const q=$('#q').value.toLowerCase().trim();$('#ls').innerHTML=q.length<2?'':CL.filter(c=>((c.nombre||'')+(c.tel||'')).toLowerCase().includes(q)).slice(0,8).map(c=>`<div class="row" data-id="${c.id}" tabindex="0"><span>${esc(c.nombre)}</span><span class="m">${c.n||0}/10</span></div>`).join('');document.querySelectorAll('.row[data-id]').forEach(r=>r.onclick=()=>pick(r.dataset.id))};
+ $('#sc').onclick=scan;$('#nw').onclick=newC}
+function pick(id){
+ const c=CL.find(x=>x.id==id);if(!c)return alert('Esa tarjeta no está en tu lista. Recarga la página.');
+ const num=(c.n||0)+1,dc=num==5?.2:num==10?.5:0;
+ $('#pn').innerHTML=`<div class="card"><b>${esc(c.nombre)}</b><div class="n">${c.n||0}/10</div><p>Visita ${num}${dc?` · <b>${dc*100}% de descuento</b>`:''}</p><select id="sv" aria-label="Servicio">${Object.entries(cf.precios).map(([k,v])=>`<option value="${esc(k)}">${esc(k)} · $${v}</option>`).join('')}</select><input id="ds" type="number" min="0" inputmode="numeric" placeholder="Diseño $ (opcional, sin descuento)" aria-label="Diseño"><p id="tt"></p><button id="ok">Registrar visita</button>${c.lv?'<button class="s" id="un">Deshacer última visita</button>':''}</div>`;
+ const t=()=>{$('#tt').innerHTML='Cobrar: <b>$'+(Math.round(cf.precios[$('#sv').value]*(1-dc))+(+$('#ds').value||0))+'</b>'};
+ $('#sv').onchange=t;$('#ds').oninput=t;t();$('#ok').onclick=()=>save(c,num,dc);if(c.lv)$('#un').onclick=()=>undo(c);$('#pn').scrollIntoView()}
+async function save(c,num,dc){
+ if(!navigator.onLine)return alert('Sin conexión. Espera a que regrese la señal.');
+ if(c.ult&&Date.now()-c.ult<72e5&&!confirm('Este cliente ya tuvo una visita hace menos de 2 horas. ¿Registrar de todos modos?'))return;
+ $('#ok').disabled=true;const s=$('#sv').value,p=cf.precios[s],tot=Math.round(p*(1-dc)),dis=Math.max(0,+$('#ds').value||0),id=mk(),b=writeBatch(db),t=Date.now(),v={t,serv:s,precio:p,desc:dc,total:tot,dis,num},u={n:num%10,ult:t,lv:id,pn:c.n||0,pu:c.ult||0};
+ b.set(doc(db,'clientes',c.id,'visitas',id),v);b.set(doc(db,'ventas',id),{...v,fecha:new Date().toLocaleDateString('sv-SE'),cid:c.id,nombre:c.nombre});b.update(doc(db,'clientes',c.id),u);
+ try{await b.commit();Object.assign(c,u);$('#pn').innerHTML=`<div class="card"><b>Visita registrada</b><p>Cobrar $${tot+dis}</p>${num==10?'<p>¡Ciclo completado! La tarjeta vuelve a 0/10.</p>':''}<button class="s" id="un">Deshacer</button></div>`;$('#un').onclick=()=>undo(c);$('#q').value='';$('#ls').innerHTML=''}
+ catch(e){alert('No se guardó: '+e.code);$('#ok').disabled=false}}
+async function undo(c){
+ if(!c.lv||!confirm('¿Deshacer la última visita de '+c.nombre+'?'))return;const b=writeBatch(db);
+ b.delete(doc(db,'clientes',c.id,'visitas',c.lv));b.delete(doc(db,'ventas',c.lv));b.update(doc(db,'clientes',c.id),{n:c.pn||0,ult:c.pu||deleteField(),lv:deleteField()});
+ try{await b.commit();c.n=c.pn||0;c.ult=c.pu||0;delete c.lv;$('#pn').innerHTML='<div class="card"><b>Visita deshecha</b></div>'}catch(e){alert('No se pudo deshacer: '+e.code)}}
+async function newC(){
+ const nombre=(prompt('Nombre del cliente')||'').trim(),tel=(prompt('Teléfono (10 dígitos)')||'').trim();if(!nombre||!tel)return;
+ const tok=mk();try{await setDoc(doc(db,'clientes',tok),{nombre,tel,n:0,alta:Date.now()})}catch(e){return alert('No se pudo crear: '+e.code)}
+ CL.push({id:tok,nombre,tel,n:0});const d=tel.replace(/\D/g,'');
+ open(`https://wa.me/${d.length==10?'52'+d:d}?text=`+encodeURIComponent(`Hola ${nombre}, esta es tu tarjeta de fidelidad: ${URLB}?c=${tok}`),'_blank')}
+async function scan(){
+ if(!window.jsQR)return alert('No cargó el lector QR. Revisa tu conexión y recarga.');
+ const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;background:#000;z-index:9;display:flex;flex-direction:column';
+ const v=document.createElement('video');v.setAttribute('playsinline','');v.style.cssText='flex:1;min-height:0;width:100%;object-fit:cover';
+ const x=document.createElement('button');x.textContent='Cerrar';o.append(v,x);document.body.append(o);
+ let st,run=1;const end=()=>{run=0;st&&st.getTracks().forEach(t=>t.stop());o.remove()};x.onclick=end;
+ try{st=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})}catch(e){end();return alert('No se pudo abrir la cámara. Revisa el permiso.')}
+ v.srcObject=st;await v.play();const cv=document.createElement('canvas'),g=cv.getContext('2d',{willReadFrequently:true});
+ (function f(){if(!run)return;if(v.videoWidth){cv.width=v.videoWidth;cv.height=v.videoHeight;g.drawImage(v,0,0);
+  const r=jsQR(g.getImageData(0,0,cv.width,cv.height).data,cv.width,cv.height),m=r&&r.data.match(/[?&]c=([0-9a-f]{20,})/);if(m){end();return pick(m[1])}}requestAnimationFrame(f)})()}
+function cliTab(){
+ $('#b').innerHTML=`<input id="q" placeholder="Buscar por nombre o teléfono" aria-label="Buscar"><select id="fl" aria-label="Filtro"><option value="">Todos</option><option value="p">Por completar (4 o 9 sellos)</option><option value="s">Sin visitas</option></select><p class="m" id="ct"></p><div id="ls"></div><button class="s" id="rf">Actualizar lista</button>`;
+ const ls=()=>{const q=$('#q').value.toLowerCase().trim(),f=$('#fl').value,a=CL.filter(c=>(!q||((c.nombre||'')+(c.tel||'')).toLowerCase().includes(q))&&(!f||(f=='p'?[4,9].includes(c.n||0):!c.ult))).sort((x,y)=>(x.nombre||'').localeCompare(y.nombre||''));
+  $('#ct').textContent=a.length+' tarjetas';$('#ls').innerHTML=a.slice(0,100).map(c=>`<div class="row" data-id="${c.id}" tabindex="0"><span>${esc(c.nombre)}<br><span class="m">${esc(c.tel||'')}</span></span><b>${c.n||0}/10</b></div>`).join('');
+  document.querySelectorAll('.row[data-id]').forEach(r=>r.onclick=()=>{tab('r');pick(r.dataset.id)})};
+ $('#q').oninput=ls;$('#fl').onchange=ls;$('#rf').onclick=async()=>{CL=(await getDocs(collection(db,'clientes'))).docs.map(d=>({id:d.id,...d.data()}));ls()};ls()}
+async function resTab(){
+ const hoy=new Date().toLocaleDateString('sv-SE');$('#b').innerHTML='<p class="m">Cargando…</p>';let vs;
+ try{vs=(await getDocs(query(collection(db,'ventas'),where('fecha','==',hoy)))).docs.map(d=>d.data()).sort((a,b)=>a.t-b.t)}catch(e){return $('#b').innerHTML='<div class="card">No se pudo leer el resumen: '+e.code+'</div>'}
+ const S={};vs.forEach(v=>{const o=S[v.serv]=S[v.serv]||{n:0,m:0};o.n++;o.m+=v.total});
+ const dn=vs.filter(v=>v.dis>0),dt=dn.reduce((a,v)=>a+v.dis,0),tot=vs.reduce((a,v)=>a+v.total+(v.dis||0),0),dsc=vs.reduce((a,v)=>a+Math.round(v.precio-v.total),0),keys=[...new Set([...Object.keys(cf.precios),...Object.keys(S)])];
+ $('#b').innerHTML=`<div class="card"><b>Hoy ${hoy}</b><div class="n">$${tot}</div><p class="m">${vs.length} visitas · descuentos dados $${dsc}</p>${keys.map(k=>`<div class="row"><span>${esc(k)}</span><span>${(S[k]||{n:0}).n} · $${(S[k]||{m:0}).m}</span></div>`).join('')}<div class="row"><span>Diseños</span><span>${dn.length} · $${dt}</span></div></div><div class="card"><b>Detalle</b>${vs.map(v=>`<div class="row"><span>${new Date(v.t).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})} ${esc(v.nombre)}<br><span class="m">${esc(v.serv)}${v.desc?' · '+v.desc*100+'%':''}${v.dis?' · diseño $'+v.dis:''}</span></span><b>$${v.total+(v.dis||0)}</b></div>`).join('')||'<p class="m">Sin visitas hoy.</p>'}</div><button id="cr">Cerrar turno</button><p id="er" class="m" role="alert"></p>`;
+ $('#cr').onclick=async()=>{if(!confirm('¿Cerrar el turno de hoy con $'+tot+'?'))return;try{await setDoc(doc(db,'cierres',hoy),{fecha:hoy,visitas:vs.length,total:tot,descuentos:dsc,porServicio:S,disenos:{n:dn.length,total:dt},cerrado:Date.now()});$('#er').textContent='Turno cerrado y guardado.'}catch(e){$('#er').textContent='No se guardó: '+e.code}}}
+function prTab(){
+ let p={...cf.precios};const rd=()=>document.querySelectorAll('[data-k]').forEach(i=>p[i.dataset.k]=Math.max(0,+i.value||0));
+ const dr=()=>{$('#b').innerHTML=`<div class="card">${Object.keys(p).map(k=>`<div class="row"><span>${esc(k)}</span><span><input style="width:80px;margin:0" type="number" min="0" data-k="${esc(k)}" value="${p[k]}"> <button class="s" style="display:inline-block;width:auto;padding:8px 12px" data-d="${esc(k)}" aria-label="Eliminar ${esc(k)}">✕</button></span></div>`).join('')}<p><b>Agregar servicio</b></p><input id="nn" placeholder="Nombre" maxlength="30"><input id="np" type="number" min="0" placeholder="Precio"><button class="s" id="ad">Agregar</button><button id="gp">Guardar precios</button><p id="er" class="m" role="alert"></p></div>`;
+  document.querySelectorAll('[data-d]').forEach(x=>x.onclick=()=>{rd();if(Object.keys(p).length<2)return;if(confirm('¿Eliminar '+x.dataset.d+'?')){delete p[x.dataset.d];dr()}});
+  $('#ad').onclick=()=>{rd();const n=$('#nn').value.trim();if(!n||p[n]!==undefined)return $('#er').textContent='Escribe un nombre nuevo.';p[n]=Math.max(0,+$('#np').value||0);dr()};
+  $('#gp').onclick=async()=>{rd();try{await setDoc(cfgRef,{precios:p},{mergeFields:['precios']});cf.precios=p;$('#er').textContent='Precios guardados.'}catch(e){$('#er').textContent='No se guardó: '+e.code}}};dr()}
+function cfgTab(){
+ const p=cf.precios;
+ $('#b').innerHTML=`<div class="card"><label for="av">Aviso para los clientes</label><textarea id="av" maxlength="140">${esc(cf.aviso)}</textarea><label for="em">Emojis de temporada</label><select id="em">${EMO.map(e=>`<option ${e==cf.emo?'selected':''}>${e}</option>`).join('')}</select>
+ <label for="wa">WhatsApp (lada + número, solo dígitos)</label><input id="wa" inputmode="tel" value="${esc(cf.wa)}"><label for="wm">Mensaje de WhatsApp</label><input id="wm" maxlength="100" value="${esc(cf.waMsg)}">
+ <label for="ig">Instagram (usuario sin @)</label><input id="ig" value="${esc(cf.ig)}"><label for="fb">Facebook (enlace)</label><input id="fb" value="${esc(cf.fb)}"><button id="sv2">Guardar cambios</button><p id="er" class="m" role="alert"></p></div>`;
+ $('#sv2').onclick=async()=>{const n={aviso:$('#av').value.trim(),emo:$('#em').value,wa:$('#wa').value.replace(/\D/g,''),waMsg:$('#wm').value.trim(),ig:$('#ig').value.trim().replace(/^@/,''),fb:$('#fb').value.trim()},er=$('#er');
+  if(n.wa&&!okWa(n.wa))return er.textContent='El WhatsApp debe tener de 10 a 15 dígitos.';
+  if(n.ig&&!okIg(n.ig))return er.textContent='Usuario de Instagram no válido.';
+  if(n.fb&&!okFb(n.fb))return er.textContent='El enlace debe ser de facebook.com o fb.com.';
+  try{await setDoc(cfgRef,n,{merge:true});cf={...cf,...n};er.textContent='Guardado. Los clientes ya ven los cambios.'}catch(e){er.textContent='No se guardó: '+e.code}}}
+
+onAuthStateChanged(auth,u=>{
+ if(P.get('c'))return clientView(P.get('c'));
+ if(P.has('alta'))return altaView();
+ u&&u.email===ADMIN?admin():login()});
+</script></body></html>
