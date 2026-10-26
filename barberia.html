@@ -34,7 +34,7 @@ main{padding-bottom:100px}
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
 .tile{background:var(--c);border:1px solid var(--l);border-radius:12px;padding:10px 12px}.tile b{display:block;font:700 32px/1 'Barlow Condensed',sans-serif}
 .hero{background:var(--t);color:var(--bg);border:0}.hero .m{color:var(--bg);opacity:.8}
-</style>
+.lg{position:absolute;top:12px;left:14px;width:56px;height:56px;object-fit:contain}</style>
 <script>function L(u,f){var s=document.createElement('script');s.src=u;s.onerror=f;document.head.appendChild(s)}
 L('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js',function(){L('https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js')});
 L('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js')</script><script>window.__e=[];addEventListener('error',function(e){__e.push(e.message||'error al cargar un archivo')});addEventListener('unhandledrejection',function(e){var r=e.reason;__e.push('Promesa: '+(r&&(r.code||r.message)||r))});
@@ -60,7 +60,7 @@ const EMO=['✂️💈','🎃💀','🎄🎅','🔥💪','🏆⚽','🇲🇽🦅
 const D0={aviso:'',emo:EMO[0],wa:'',waMsg:'Hola, quiero agendar una cita',ig:'',fb:'',precios:{'Corte':150,'Barba':100,'Ceja':50,'Corte y barba':230,'Corte, barba y ceja':270}};
 const cfgRef=B?doc(db,'shops',B,'config','main'):null,URLB=location.origin+location.pathname;
 const mk=()=>[...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,'0')).join('');
-const vig=(d,h)=>{const x=new Date().toLocaleDateString('sv-SE');return(!d||x>=d)&&(!h||x<=h)},okC=c=>/^#[0-9a-fA-F]{6}$/.test(c||''),thm=f=>(okC(f.c1)?`--r:${f.c1};`:'')+(okC(f.c2)?`--b:${f.c2};`:'');
+const vig=(d,h)=>{const x=new Date().toLocaleDateString('sv-SE');return(!d||x>=d)&&(!h||x<=h)},okLg=s=>/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(s||''),okC=c=>/^#[0-9a-fA-F]{6}$/.test(c||''),thm=f=>(okC(f.c1)?`--r:${f.c1};`:'')+(okC(f.c2)?`--b:${f.c2};`:'');
 async function getCfg(){try{const s=await getDoc(cfgRef);return{...D0,...(s.exists()?s.data():{})}}catch(e){return D0}}
 const okWa=w=>/^\d{10,15}$/.test(w),okIg=i=>/^[A-Za-z0-9._]{1,30}$/.test(i),okFb=f=>/^https:\/\/(www\.)?(facebook|fb)\.com\/[^\s"'<>]*$/.test(f);
 let CL=[],cf=D0;const tk=c=>(c.tel||'').replace(/\D/g,'').slice(-10),dup=c=>tk(c)&&CL.filter(x=>tk(x)==tk(c)).length>1;
@@ -75,12 +75,17 @@ function card(c,vs,f,tok){
  if(f.ig&&okIg(f.ig))links.push(`<a class="b s" rel="noopener" target="_blank" href="https://instagram.com/${f.ig}">Instagram @${esc(f.ig)}</a>`);
  if(f.fb&&okFb(f.fb))links.push(`<a class="b s" rel="noopener" target="_blank" href="${esc(f.fb)}">Facebook</a>`);
  const cyc=vs[0]&&vs[0].num==10&&n==0?'<p><b>¡Ciclo completado! Empiezas de nuevo en 0/10.</b></p>':'';
- return`<div class="card"><span class="emo">${vig(f.emD,f.emH)?esc(f.emo):''}</span><div style="text-align:center;padding-top:20px"><p class="m">${esc(SH.nombre||'')} · Tarjeta de</p><h2 style="margin:0">${esc(c.nombre)}</h2>
+ return`<div class="card"><span class="emo">${vig(f.emD,f.emH)?esc(f.emo):''}</span>${okLg(f.logo)?`<img class="lg" alt="" src="${f.logo}">`:''}<div style="text-align:center;padding-top:20px"><p class="m">${esc(SH.nombre||'')} · Tarjeta de</p><h2 style="margin:0">${esc(c.nombre)}</h2>
  <div class="n">${n}<small>/10</small></div><div class="casillas" role="img" aria-label="${n} de 10 visitas">${Array.from({length:10},(_,i)=>`<i class="${i<n?'f':''}"></i>`).join('')}</div><div class="lb" aria-hidden="true">${Array.from({length:10},(_,i)=>i%5==4?`<b>${i+1}</b>`:`<span>${i+1}</span>`).join('')}</div><p class="m">Descuento en la visita 5 (20%) y en la 10 (50%)</p><p><b>${msg}</b></p>${cyc}${qr}</div>
  ${f.aviso&&vig(f.avD,f.avH)?`<p class="aviso">${esc(f.aviso)}</p>`:''}
  <p class="m" style="margin:10px 0 0">Últimas visitas</p>${vs.map(v=>`<div class="row"><span>${new Date(v.t).toLocaleDateString('es-MX')} · ${esc(v.serv)}</span><span>${v.desc?v.desc*100+'%':''}</span></div>`).join('')||'<p class="m">Aún no tienes visitas.</p>'}</div>${standalone()||tok.startsWith('ejemplo')?'':'<div class="card"><p class="m">Guarda tu tarjeta en tu pantalla de inicio para no perder el enlace.</p><button class="s" id="a2">Agregar a pantalla de inicio</button></div>'}${links.join('')}`}
+function icoCanvas(f){return new Promise(ok=>{const c=document.createElement('canvas');c.width=c.height=180;const g=c.getContext('2d');g.fillStyle=okC(f.cb)?f.cb:'#ffffff';g.fillRect(0,0,180,180);if(!okLg(f.logo))return ok(c);const i=new Image();i.onload=()=>{const s=Math.min(140/i.width,140/i.height);g.drawImage(i,(180-i.width*s)/2,(180-i.height*s)/2,i.width*s,i.height*s);ok(c)};i.onerror=()=>ok(c);i.src=f.logo})}
+async function aplicaIcono(f){
+ let h='icono.png';if(f.icoArchivo)h='iconos/'+B+'.png';else if(okLg(f.logo))h=(await icoCanvas(f)).toDataURL('image/png');
+ document.querySelectorAll('link[rel=apple-touch-icon]').forEach(x=>x.remove());const l=document.createElement('link');l.rel='apple-touch-icon';l.href=h;document.head.append(l);
+ if(f.corto){let m=document.querySelector('meta[name=apple-mobile-web-app-title]');if(!m){m=document.createElement('meta');m.name='apple-mobile-web-app-title';document.head.append(m)}m.content=String(f.corto).slice(0,14)}}
 async function clientView(tok){
- const f=await getCfg();document.body.style.cssText=thm(f)+(okC(f.fondo)?`background:${f.fondo};`:'');let c=null,vs=[],ready=false;
+ const f=await getCfg();document.body.style.cssText=thm(f)+(okC(f.fondo)?`background:${f.fondo};`:'');aplicaIcono(f);let c=null,vs=[],ready=false;
  const r=()=>{V.innerHTML=c?card(c,vs,f,tok):ready?'<div class="card">No encontramos esta tarjeta. Pide tu enlace al barbero.</div>':'';const a=$('#a2');if(a)a.onclick=a2h};
  onSnapshot(doc(db,'shops',B,'clientes',tok),s=>{c=s.exists()?s.data():null;ready=true;r()},()=>{ready=true;r()});
  onSnapshot(query(collection(db,'shops',B,'clientes',tok,'visitas'),orderBy('t','desc'),limit(5)),s=>{vs=s.docs.map(d=>d.data());r()},()=>{})}
@@ -186,20 +191,26 @@ function prTab(){
 function cfgTab(){
  const dt=(id,l,v)=>`<label for="${id}">${l}</label><input id="${id}" type="date" value="${esc(v||'')}">`,
  cl=(id,l,v,d)=>`<label for="${id}">${l}</label><input id="${id}" type="color" style="height:46px;padding:4px" value="${okC(v)?v:d}">`,
- cc={c1:cf.c1||'',c2:cf.c2||'',fondo:cf.fondo||''};
+ cc={c1:cf.c1||'',c2:cf.c2||'',fondo:cf.fondo||'',cb:cf.cb||''};let lg=cf.logo||'';
  $('#b').innerHTML=`<div class="card"><b>Vista previa (así lo ve el cliente)</b><label for="pn5" class="m">Sellos de ejemplo</label><input id="pn5" type="range" min="0" max="10" value="4"><div id="pv"></div><p class="m" id="vst"></p></div>
  <div class="card"><label for="av">Aviso para los clientes</label><textarea id="av" maxlength="140">${esc(cf.aviso)}</textarea>${dt('avD','Aviso visible desde (opcional)',cf.avD)}${dt('avH','Aviso visible hasta (opcional)',cf.avH)}
  <label for="em">Emojis de temporada</label><select id="em">${EMO.map(e=>`<option ${e==cf.emo?'selected':''}>${e}</option>`).join('')}</select>${dt('emD','Emojis desde (opcional)',cf.emD)}${dt('emH','Emojis hasta (opcional)',cf.emH)}
  ${cl('c1','Color principal',cf.c1,'#C8102E')}${cl('c2','Color secundario',cf.c2,'#1F4E8C')}${cl('fo','Fondo de la pantalla',cf.fondo,'#F3F5F8')}<button class="s" id="rs">Restablecer colores</button>
+ <label for="lgf">Logo (PNG o JPG)</label><input id="lgf" type="file" accept="image/png,image/jpeg"><button class="s" id="lgx">Quitar logo</button>
+ <label for="co">Nombre corto del ícono (máx. 12 letras)</label><input id="co" maxlength="12" value="${esc(cf.corto||'')}">${cl('cb','Color de fondo del ícono',cf.cb,'#FFFFFF')}
+ <label><input type="checkbox" id="ia" style="width:auto;margin-right:8px" ${cf.icoArchivo?'checked':''}>Usar ícono desde archivo (solo si el automático falla)</label><button class="s" id="ib">Descargar ícono 180×180</button>
  <label for="wa">WhatsApp (lada + número, solo dígitos)</label><input id="wa" inputmode="tel" value="${esc(cf.wa)}"><label for="wm">Mensaje de WhatsApp</label><input id="wm" maxlength="100" value="${esc(cf.waMsg)}">
  <label for="ig">Instagram (usuario sin @)</label><input id="ig" value="${esc(cf.ig)}"><label for="fb">Facebook (enlace)</label><input id="fb" value="${esc(cf.fb)}">
  <button id="sv2">Guardar cambios</button><p id="er" class="m" role="alert"></p></div>`;
- const g=()=>({aviso:$('#av').value.trim(),avD:$('#avD').value,avH:$('#avH').value,emo:$('#em').value,emD:$('#emD').value,emH:$('#emH').value,...cc,wa:$('#wa').value.replace(/\D/g,''),waMsg:$('#wm').value.trim(),ig:$('#ig').value.trim().replace(/^@/,''),fb:$('#fb').value.trim()}),
+ const g=()=>({aviso:$('#av').value.trim(),avD:$('#avD').value,avH:$('#avH').value,emo:$('#em').value,emD:$('#emD').value,emH:$('#emH').value,...cc,logo:lg,corto:$('#co').value.trim().slice(0,12),icoArchivo:$('#ia').checked,wa:$('#wa').value.replace(/\D/g,''),waMsg:$('#wm').value.trim(),ig:$('#ig').value.trim().replace(/^@/,''),fb:$('#fb').value.trim()}),
  pv=()=>{const f=g(),n=+$('#pn5').value;$('#pv').setAttribute('style',thm(f)+'padding:12px;border-radius:14px;background:'+(okC(f.fondo)?f.fondo:'var(--bg)'));
   $('#pv').innerHTML=card({nombre:'Cliente de ejemplo',n},[{t:Date.now(),serv:'Corte',desc:0,num:n}],f,'ejemplo0000000000000000');
   $('#vst').textContent='Hoy: aviso '+(f.aviso&&vig(f.avD,f.avH)?'visible':'oculto')+' · emojis '+(vig(f.emD,f.emH)?'visibles':'ocultos')};
- [['c1','c1'],['c2','c2'],['fo','fondo']].forEach(([i,k])=>$('#'+i).addEventListener('input',()=>cc[k]=$('#'+i).value));
+ [['c1','c1'],['c2','c2'],['fo','fondo'],['cb','cb']].forEach(([i,k])=>$('#'+i).addEventListener('input',()=>cc[k]=$('#'+i).value));
  $('#rs').onclick=()=>{cc.c1=cc.c2=cc.fondo='';$('#c1').value='#C8102E';$('#c2').value='#1F4E8C';$('#fo').value='#F3F5F8';pv()};
+ $('#lgx').onclick=()=>{lg='';$('#lgf').value='';pv()};
+ $('#lgf').onchange=()=>{const fl=$('#lgf').files[0];if(!fl)return;const r=new FileReader();r.onload=()=>{const i=new Image();i.onload=()=>{let w=240;for(let n=0;n<4;n++){const s=Math.min(1,w/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=Math.round(i.width*s);c.height=Math.round(i.height*s);c.getContext('2d').drawImage(i,0,0,c.width,c.height);const d=c.toDataURL('image/png');if(d.length<120000||n==3){lg=d;break}w-=60}pv()};i.onerror=()=>{$('#er').textContent='No se pudo leer esa imagen.'};i.src=r.result};r.readAsDataURL(fl)};
+ $('#ib').onclick=async()=>{const c=await icoCanvas(g());c.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=B+'.png';a.click()})};
  document.querySelectorAll('#b input,#b textarea,#b select').forEach(x=>{x.addEventListener('input',pv);x.addEventListener('change',pv)});pv();
  $('#sv2').onclick=async()=>{const n=g(),er=$('#er');
   if(n.wa&&!okWa(n.wa))return er.textContent='El WhatsApp debe tener de 10 a 15 dígitos.';
@@ -232,9 +243,10 @@ async function adminsDlg(id){
 async function panel(){
  V.innerHTML='<p class="m">Cargando…</p>';let sh=[];
  try{sh=(await Promise.race([getDocs(collection(db,'shops')),new Promise((_,r)=>setTimeout(()=>r({code:'tiempo-agotado'}),10000))])).docs.map(d=>({id:d.id,...d.data()}))}catch(e){return V.innerHTML='<div class="card">No se pudo leer las barberías: '+e.code+'</div>'}
+ const lgs=await Promise.all(sh.map(s=>getDoc(doc(db,'shops',s.id,'config','main')).then(x=>x.exists()&&okLg(x.data().logo)?x.data().logo:'').catch(()=>'')));
  V.innerHTML=`<header class="hd"><span>💈 Panel master</span><button class="s" id="so">Salir</button></header>
  <div class="card"><b>Nueva barbería</b><input id="nn" placeholder="Nombre (ej. Barbería el Wero)" maxlength="40" aria-label="Nombre"><input id="ns" placeholder="Enlace corto (ej. el-wero)" maxlength="30" aria-label="Enlace corto"><button id="nb">Crear barbería</button><p id="er" class="m" role="alert"></p></div>
- ${sh.map(s=>`<div class="card"><b>${esc(s.nombre||s.id)}</b> <span class="m">· ${s.activo===false?'desactivada':'activa'} · ${esc(s.id)}</span>
+ ${sh.map((s,i)=>`<div class="card">${lgs[i]?`<img src="${lgs[i]}" alt="" style="width:44px;height:44px;object-fit:contain;vertical-align:middle;margin-right:8px">`:''}<b>${esc(s.nombre||s.id)}</b> <span class="m">· ${s.activo===false?'desactivada':'activa'} · ${esc(s.id)}</span>
  <a class="b s" href="?b=${esc(s.id)}">Abrir como administrador</a><button class="s" data-a="${esc(s.id)}">QR y enlace de administradores</button><button class="s" data-c="${esc(s.id)}">QR y enlace de clientes</button><button class="s" data-i="${esc(s.id)}">Administradores e invitaciones</button><button class="s" data-t="${esc(s.id)}">${s.activo===false?'Reactivar':'Desactivar'}</button></div>`).join('')}`;
  $('#so').onclick=()=>signOut(auth);
  $('#nb').onclick=async()=>{const nombre=$('#nn').value.trim(),id=$('#ns').value.trim().toLowerCase(),er=$('#er');
