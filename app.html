@@ -21,6 +21,19 @@ nav button{margin:0;padding:10px 2px;font-size:15px;letter-spacing:.3px}nav butt
 .row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--l)}
 .emo{position:absolute;top:12px;right:14px;font-size:26px}.qr{width:156px;margin:14px auto;background:#fff;padding:8px;border-radius:10px}
 .aviso{background:var(--t);color:var(--bg);border-radius:12px;padding:12px 14px;font-weight:600;margin:12px 0 0}
+.hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font:700 24px 'Barlow Condensed',sans-serif}
+.hd button{width:auto;margin:0;padding:6px 14px;font-size:16px}
+nav{position:fixed;left:0;right:0;top:auto;bottom:0;margin:0;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--l);border-bottom:0;background:var(--c);gap:2px}
+nav button{display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent!important;color:var(--m)!important;border:0!important;padding:6px 2px;font-size:13px;letter-spacing:.3px}
+nav button b{font-size:20px;line-height:1}nav button:not(.s){color:var(--r)!important}
+main{padding-bottom:100px}
+.svc{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.svc button{margin:0;padding:12px 8px;background:var(--bg);color:var(--t);border:1px solid var(--l);font:600 16px Barlow,sans-serif;letter-spacing:0;text-align:left}
+.svc button[aria-pressed=true]{border-color:var(--r);box-shadow:inset 0 0 0 2px var(--r)}.svc small{display:block;color:var(--m);font-weight:500}
+.mini{width:96px;margin:4px 0 0}.mini i{height:9px;border-radius:2px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.tile{background:var(--c);border:1px solid var(--l);border-radius:12px;padding:10px 12px}.tile b{display:block;font:700 32px/1 'Barlow Condensed',sans-serif}
+.hero{background:var(--t);color:var(--bg);border:0}.hero .m{color:var(--bg);opacity:.8}
 </style>
 <script>function L(u,f){var s=document.createElement('script');s.src=u;s.onerror=f;document.head.appendChild(s)}
 L('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js',function(){L('https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js')});
@@ -81,13 +94,13 @@ function altaView(){
 
 /* ---------- Administrador ---------- */
 function login(){
- V.innerHTML=`<div class="card"><h2>Administrador</h2><input id="em" type="email" aria-label="Correo" value="${ADMIN}"><input id="pw" type="password" aria-label="Contraseña" placeholder="Contraseña"><button id="go">Entrar</button><p id="er" class="m" role="alert"></p></div>`;
+ V.innerHTML=`<div class="card"><div style="font-size:56px;line-height:1">💈</div><h2>Administrador</h2><input id="em" type="email" aria-label="Correo" value="${ADMIN}"><input id="pw" type="password" aria-label="Contraseña" placeholder="Contraseña"><button id="go">Entrar</button><p id="er" class="m" role="alert"></p></div>`;
  $('#go').onclick=()=>signInWithEmailAndPassword(auth,$('#em').value.trim(),$('#pw').value).catch(()=>$('#er').textContent='Correo o contraseña incorrectos.')}
 async function admin(){cf=await getCfg();CL=(await getDocs(collection(db,'clientes'))).docs.map(d=>({id:d.id,...d.data()}));tab('r')}
-const TB=[['r','Registrar'],['c','Clientes'],['s','Resumen'],['p','Precios'],['d','Tarjeta']];
+const TB=[['r','✂️','Registrar'],['c','👥','Clientes'],['s','📊','Resumen'],['p','💲','Precios'],['d','🎨','Tarjeta']];
 const ofl=()=>{const e=$('#of');if(e)e.style.display=navigator.onLine?'none':'block'};addEventListener('online',ofl);addEventListener('offline',ofl);
 function tab(t){
- V.innerHTML=`<div id="of" class="m" style="display:none;color:var(--r)" role="alert">Sin conexión: no registres visitas hasta que regrese.</div><nav>${TB.map(([k,n])=>`<button class="${k==t?'':'s'}" data-t="${k}">${n}</button>`).join('')}<button class="s" id="so">Salir</button></nav><div id="b"></div>`;
+ V.innerHTML=`<header class="hd"><span>💈 Panel de la barbería</span><button class="s" id="so">Salir</button></header><div id="of" class="m" style="display:none;color:var(--r)" role="alert">Sin conexión: no registres visitas hasta que regrese.</div><nav>${TB.map(([k,i,n])=>`<button class="${k==t?'':'s'}" data-t="${k}"><b>${i}</b>${n}</button>`).join('')}</nav><div id="b"></div>`;
  document.querySelectorAll('[data-t]').forEach(x=>x.onclick=()=>tab(x.dataset.t));$('#so').onclick=()=>signOut(auth);
  ({r:regTab,c:cliTab,s:resTab,p:prTab,d:cfgTab})[t]();ofl()}
 function regTab(){
@@ -97,9 +110,9 @@ function regTab(){
 function pick(id){
  const c=CL.find(x=>x.id==id);if(!c)return alert('Esa tarjeta no está en tu lista. Recarga la página.');
  const num=(c.n||0)+1,dc=num==5?.2:num==10?.5:0;
- $('#pn').innerHTML=`<div class="card"><b>${esc(c.nombre)}</b><div class="n">${c.n||0}/10</div><p>Visita ${num}${dc?` · <b>${dc*100}% de descuento</b>`:''}</p><select id="sv" aria-label="Servicio">${Object.entries(cf.precios).map(([k,v])=>`<option value="${esc(k)}">${esc(k)} · $${v}</option>`).join('')}</select><input id="ds" type="number" min="0" inputmode="numeric" placeholder="Diseño $ (opcional, sin descuento)" aria-label="Diseño"><p id="tt"></p><button id="ok">Registrar visita</button>${c.lv?'<button class="s" id="un">Deshacer última visita</button>':''}</div>`;
+ $('#pn').innerHTML=`<div class="card"><b>${esc(c.nombre)}</b><div class="n">${c.n||0}/10</div><p>Visita ${num}${dc?` · <b>${dc*100}% de descuento</b>`:''}</p><input type="hidden" id="sv" value="${esc(Object.keys(cf.precios)[0]||'')}"><div class="svc">${Object.entries(cf.precios).map(([k,v],i)=>`<button type="button" data-sv="${esc(k)}" aria-pressed="${i==0}">${esc(k)}<small>$${v}</small></button>`).join('')}</div><input id="ds" type="number" min="0" inputmode="numeric" placeholder="Diseño $ (opcional, sin descuento)" aria-label="Diseño"><p id="tt"></p><button id="ok">Registrar visita</button>${c.lv?'<button class="s" id="un">Deshacer última visita</button>':''}</div>`;
  const t=()=>{$('#tt').innerHTML='Cobrar: <b>$'+(Math.round(cf.precios[$('#sv').value]*(1-dc))+(+$('#ds').value||0))+'</b>'};
- $('#sv').onchange=t;$('#ds').oninput=t;t();$('#ok').onclick=()=>save(c,num,dc);if(c.lv)$('#un').onclick=()=>undo(c);$('#pn').scrollIntoView()}
+ document.querySelectorAll('[data-sv]').forEach(x=>x.onclick=()=>{$('#sv').value=x.dataset.sv;document.querySelectorAll('[data-sv]').forEach(y=>y.setAttribute('aria-pressed',y==x));t()});$('#ds').oninput=t;t();$('#ok').onclick=()=>save(c,num,dc);if(c.lv)$('#un').onclick=()=>undo(c);$('#pn').scrollIntoView()}
 async function save(c,num,dc){
  if(!navigator.onLine)return alert('Sin conexión. Espera a que regrese la señal.');
  if(c.ult&&Date.now()-c.ult<72e5&&!confirm('Este cliente ya tuvo una visita hace menos de 2 horas. ¿Registrar de todos modos?'))return;
@@ -129,7 +142,7 @@ async function scan(){
 function cliTab(){
  $('#b').innerHTML=`<input id="q" placeholder="Buscar por nombre o teléfono" aria-label="Buscar"><select id="fl" aria-label="Filtro"><option value="">Todos</option><option value="p">Por completar (4 o 9 sellos)</option><option value="s">Sin visitas</option></select><p class="m" id="ct"></p><div id="ls"></div><button class="s" id="rf">Actualizar lista</button>`;
  const ls=()=>{const q=$('#q').value.toLowerCase().trim(),f=$('#fl').value,a=CL.filter(c=>(!q||((c.nombre||'')+(c.tel||'')).toLowerCase().includes(q))&&(!f||(f=='p'?[4,9].includes(c.n||0):!c.ult))).sort((x,y)=>(x.nombre||'').localeCompare(y.nombre||''));
-  $('#ct').textContent=a.length+' tarjetas';$('#ls').innerHTML=a.slice(0,100).map(c=>`<div class="row" data-id="${c.id}" tabindex="0"><span>${esc(c.nombre)}<br><span class="m">${esc(c.tel||'')}</span></span><b>${c.n||0}/10</b></div>`).join('');
+  $('#ct').textContent=a.length+' tarjetas';$('#ls').innerHTML=a.slice(0,100).map(c=>`<div class="row" data-id="${c.id}" tabindex="0"><span>${esc(c.nombre)}<br><span class="m">${esc(c.tel||'')}</span></span><span><b>${c.n||0}/10</b><div class="casillas mini">${Array.from({length:10},(_,i)=>`<i class="${i<(c.n||0)?'f':''}"></i>`).join('')}</div></span></div>`).join('');
   document.querySelectorAll('.row[data-id]').forEach(r=>r.onclick=()=>{tab('r');pick(r.dataset.id)})};
  $('#q').oninput=ls;$('#fl').onchange=ls;$('#rf').onclick=async()=>{CL=(await getDocs(collection(db,'clientes'))).docs.map(d=>({id:d.id,...d.data()}));ls()};ls()}
 async function resTab(){
@@ -137,7 +150,7 @@ async function resTab(){
  try{vs=(await getDocs(query(collection(db,'ventas'),where('fecha','==',hoy)))).docs.map(d=>d.data()).sort((a,b)=>a.t-b.t)}catch(e){return $('#b').innerHTML='<div class="card">No se pudo leer el resumen: '+e.code+'</div>'}
  const S={};vs.forEach(v=>{const o=S[v.serv]=S[v.serv]||{n:0,m:0};o.n++;o.m+=v.total});
  const dn=vs.filter(v=>v.dis>0),dt=dn.reduce((a,v)=>a+v.dis,0),tot=vs.reduce((a,v)=>a+v.total+(v.dis||0),0),dsc=vs.reduce((a,v)=>a+Math.round(v.precio-v.total),0),keys=[...new Set([...Object.keys(cf.precios),...Object.keys(S)])];
- $('#b').innerHTML=`<div class="card"><b>Hoy ${hoy}</b><div class="n">$${tot}</div><p class="m">${vs.length} visitas · descuentos dados $${dsc}</p>${keys.map(k=>`<div class="row"><span>${esc(k)}</span><span>${(S[k]||{n:0}).n} · $${(S[k]||{m:0}).m}</span></div>`).join('')}<div class="row"><span>Diseños</span><span>${dn.length} · $${dt}</span></div></div><div class="card"><b>Detalle</b>${vs.map(v=>`<div class="row"><span>${new Date(v.t).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})} ${esc(v.nombre)}<br><span class="m">${esc(v.serv)}${v.desc?' · '+v.desc*100+'%':''}${v.dis?' · diseño $'+v.dis:''}</span></span><b>$${v.total+(v.dis||0)}</b></div>`).join('')||'<p class="m">Sin visitas hoy.</p>'}</div><button id="cr">Cerrar turno</button><p id="er" class="m" role="alert"></p>`;
+ $('#b').innerHTML=`<div class="card hero"><b>Hoy ${hoy}</b><div class="n">$${tot}</div><p class="m">${vs.length} visitas · descuentos dados $${dsc}</p></div><div class="tiles">${keys.map(k=>`<div class="tile"><span class="m">${esc(k)}</span><b>${(S[k]||{n:0}).n}</b><span class="m">$${(S[k]||{m:0}).m}</span></div>`).join('')}<div class="tile"><span class="m">Diseños</span><b>${dn.length}</b><span class="m">$${dt}</span></div></div><div class="card"><b>Detalle</b>${vs.map(v=>`<div class="row"><span>${new Date(v.t).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})} ${esc(v.nombre)}<br><span class="m">${esc(v.serv)}${v.desc?' · '+v.desc*100+'%':''}${v.dis?' · diseño $'+v.dis:''}</span></span><b>$${v.total+(v.dis||0)}</b></div>`).join('')||'<p class="m">Sin visitas hoy.</p>'}</div><button id="cr">Cerrar turno</button><p id="er" class="m" role="alert"></p>`;
  $('#cr').onclick=async()=>{if(!confirm('¿Cerrar el turno de hoy con $'+tot+'?'))return;try{await setDoc(doc(db,'cierres',hoy),{fecha:hoy,visitas:vs.length,total:tot,descuentos:dsc,porServicio:S,disenos:{n:dn.length,total:dt},cerrado:Date.now()});$('#er').textContent='Turno cerrado y guardado.'}catch(e){$('#er').textContent='No se guardó: '+e.code}}}
 function prTab(){
  let p={...cf.precios};const rd=()=>document.querySelectorAll('[data-k]').forEach(i=>p[i.dataset.k]=Math.max(0,+i.value||0));
