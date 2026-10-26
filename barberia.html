@@ -42,7 +42,7 @@ L('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js')
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged,sendEmailVerification,sendPasswordResetEmail}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import{getFirestore,doc,getDoc,setDoc,onSnapshot,collection,query,orderBy,limit,writeBatch,getDocs,where,deleteField}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import{getFirestore,doc,getDoc,setDoc,onSnapshot,collection,query,orderBy,limit,writeBatch,getDocs,where,deleteField,deleteDoc}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 const app=initializeApp({
 apiKey:"AIzaSyAJ382B7G2sZjhXg2OB1fzJVioQn7sMGbk",
 authDomain:"adminbr0.firebaseapp.com",
@@ -51,7 +51,7 @@ storageBucket:"adminbr0.firebasestorage.app",
 messagingSenderId:"206654267138",
 appId:"1:206654267138:web:bfe2c122dab56e004c2c1b"}),auth=getAuth(app),db=getFirestore(app);
 const ADMIN='adminbrob@gmail.com',$=s=>document.querySelector(s),P=new URLSearchParams(location.search),V=$('#v');
-const B=(P.get('b')||'').toLowerCase().replace(/[^a-z0-9-]/g,'');let SH={},ROL='',NOM='',cvOn=0,DP=null;
+const B=(P.get('b')||'').toLowerCase().replace(/[^a-z0-9-]/g,'');let SH={},ROL='',NOM='',BEM='',cvOn=0,DP=null;
 const standalone=()=>navigator.standalone||matchMedia('(display-mode: standalone)').matches;addEventListener('beforeinstallprompt',e=>{e.preventDefault();DP=e});
 const a2h=()=>{if(DP){DP.prompt();return}alert(/iPhone|iPad|iPod/.test(navigator.userAgent)?'1) Toca el botón Compartir (cuadro con flecha hacia arriba).\n2) Elige "Añadir a pantalla de inicio".\n3) Toca "Añadir".\nSi abriste el enlace desde WhatsApp o Instagram, ábrelo primero en Safari.':'Toca el menú ⋮ del navegador y elige "Añadir a pantalla de inicio" o "Instalar app".')};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -104,7 +104,7 @@ async function admin(){cf=await getCfg();CL=(await getDocs(collection(db,'shops'
 const TB=[['r','✂️','Registrar'],['c','👥','Clientes'],['s','📊','Resumen'],['p','💲','Precios'],['d','🎨','Tarjeta']];
 const ofl=()=>{const e=$('#of');if(e)e.style.display=navigator.onLine?'none':'block'};addEventListener('online',ofl);addEventListener('offline',ofl);
 function tab(t){
- V.innerHTML=`<header class="hd"><span>💈 ${esc(SH.nombre||'Panel')}</span><button class="s" id="so">Salir</button></header><div id="of" class="m" style="display:none;color:var(--r)" role="alert">Sin conexión: no registres visitas hasta que regrese.</div><nav>${TB.filter(x=>ROL=='dueno'||'rc'.includes(x[0])).map(([k,i,n])=>`<button class="${k==t?'':'s'}" data-t="${k}"><b>${i}</b>${n}</button>`).join('')}</nav><div id="b"></div>`;
+ V.innerHTML=`<header class="hd"><span>💈 ${esc(SH.nombre||'Panel')}</span><button class="s" id="so">Salir</button></header><div id="of" class="m" style="display:none;color:var(--r)" role="alert">Sin conexión: no registres visitas hasta que regrese.</div><nav>${TB.filter(x=>ROL=='dueno'||'rcs'.includes(x[0])).map(([k,i,n])=>`<button class="${k==t?'':'s'}" data-t="${k}"><b>${i}</b>${n}</button>`).join('')}</nav><div id="b"></div>`;
  document.querySelectorAll('[data-t]').forEach(x=>x.onclick=()=>tab(x.dataset.t));$('#so').onclick=()=>signOut(auth);
  ({r:regTab,c:cliTab,s:resTab,p:prTab,d:cfgTab})[t]();ofl()}
 function regTab(){
@@ -120,14 +120,14 @@ function pick(id){
 async function save(c,num,dc){
  if(!navigator.onLine)return alert('Sin conexión. Espera a que regrese la señal.');
  if(c.ult&&Date.now()-c.ult<72e5&&!confirm('Este cliente ya tuvo una visita hace menos de 2 horas. ¿Registrar de todos modos?'))return;
- $('#ok').disabled=true;const s=$('#sv').value,p=cf.precios[s],tot=Math.round(p*(1-dc)),dis=Math.max(0,+$('#ds').value||0),id=mk(),b=writeBatch(db),t=Date.now(),v={t,serv:s,precio:p,desc:dc,total:tot,dis,num,barbero:NOM},u={n:num%10,ult:t,lv:id,pn:c.n||0,pu:c.ult||0};
+ $('#ok').disabled=true;const s=$('#sv').value,p=cf.precios[s],tot=Math.round(p*(1-dc)),dis=Math.max(0,+$('#ds').value||0),id=mk(),b=writeBatch(db),t=Date.now(),v={t,serv:s,precio:p,desc:dc,total:tot,dis,num,barbero:NOM,bem:BEM},u={n:num%10,ult:t,lv:id,pn:c.n||0,pu:c.ult||0};
  b.set(doc(db,'shops',B,'clientes',c.id,'visitas',id),v);b.set(doc(db,'shops',B,'ventas',id),{...v,fecha:new Date().toLocaleDateString('sv-SE'),cid:c.id,nombre:c.nombre});b.update(doc(db,'shops',B,'clientes',c.id),u);
  try{await b.commit();Object.assign(c,u);$('#pn').innerHTML=`<div class="card"><b>Visita registrada</b><p>Cobrar $${tot+dis}</p>${num==10?'<p>¡Ciclo completado! La tarjeta vuelve a 0/10.</p>':''}<button class="s" id="un">Deshacer</button></div>`;$('#un').onclick=()=>undo(c);$('#q').value='';$('#ls').innerHTML=''}
- catch(e){alert('No se guardó: '+e.code);$('#ok').disabled=false}}
+ catch(e){alert(e.code=='permission-denied'?'No se pudo guardar. Si el turno de hoy ya está cerrado, el dueño debe reabrirlo en Resumen.':'No se guardó: '+e.code);$('#ok').disabled=false}}
 async function undo(c){
  if(!c.lv||!confirm('¿Deshacer la última visita de '+c.nombre+'?'))return;const b=writeBatch(db);
  b.delete(doc(db,'shops',B,'clientes',c.id,'visitas',c.lv));b.delete(doc(db,'shops',B,'ventas',c.lv));b.update(doc(db,'shops',B,'clientes',c.id),{n:c.pn||0,ult:c.pu||deleteField(),lv:deleteField()});
- try{await b.commit();c.n=c.pn||0;c.ult=c.pu||0;delete c.lv;$('#pn').innerHTML='<div class="card"><b>Visita deshecha</b></div>'}catch(e){alert('No se pudo deshacer: '+e.code)}}
+ try{await b.commit();c.n=c.pn||0;c.ult=c.pu||0;delete c.lv;$('#pn').innerHTML='<div class="card"><b>Visita deshecha</b></div>'}catch(e){alert(e.code=='permission-denied'?'No puedes deshacer esa visita: la registró otro barbero o el turno de ese día ya está cerrado.':'No se pudo deshacer: '+e.code)}}
 async function delC(c){
  if(!confirm('¿Eliminar a '+c.nombre+' y todas sus visitas? No se puede deshacer.'))return;
  try{const vs=await getDocs(collection(db,'shops',B,'clientes',c.id,'visitas')),b=writeBatch(db);vs.docs.forEach(d=>b.delete(d.ref));b.delete(doc(db,'shops',B,'clientes',c.id));await b.commit();
@@ -153,13 +153,29 @@ function cliTab(){
   $('#ct').textContent=a.length+' tarjetas';$('#ls').innerHTML=a.slice(0,100).map(c=>`<div class="row" data-id="${c.id}" tabindex="0"><span>${esc(c.nombre)}<br><span class="m">${esc(c.tel||'')}${dup(c)?' · ⚠ repetido':''}</span></span><span><b>${c.n||0}/10</b><div class="casillas mini">${Array.from({length:10},(_,i)=>`<i class="${i<(c.n||0)?'f':''}"></i>`).join('')}</div></span></div>`).join('');
   document.querySelectorAll('.row[data-id]').forEach(r=>r.onclick=()=>{tab('r');pick(r.dataset.id)})};
  $('#q').oninput=ls;$('#fl').onchange=ls;$('#rf').onclick=async()=>{CL=(await getDocs(collection(db,'shops',B,'clientes'))).docs.map(d=>({id:d.id,...d.data()}));ls()};ls()}
-async function resTab(){
- const hoy=new Date().toLocaleDateString('sv-SE');$('#b').innerHTML='<p class="m">Cargando…</p>';let vs;
- try{vs=(await getDocs(query(collection(db,'shops',B,'ventas'),where('fecha','==',hoy)))).docs.map(d=>d.data()).sort((a,b)=>a.t-b.t)}catch(e){return $('#b').innerHTML='<div class="card">No se pudo leer el resumen: '+e.code+'</div>'}
- const S={};vs.forEach(v=>{const o=S[v.serv]=S[v.serv]||{n:0,m:0};o.n++;o.m+=v.total});
- const dn=vs.filter(v=>v.dis>0),dt=dn.reduce((a,v)=>a+v.dis,0),tot=vs.reduce((a,v)=>a+v.total+(v.dis||0),0),dsc=vs.reduce((a,v)=>a+Math.round(v.precio-v.total),0),keys=[...new Set([...Object.keys(cf.precios),...Object.keys(S)])];
- $('#b').innerHTML=`<div class="card hero"><b>Hoy ${hoy}</b><div class="n">$${tot}</div><p class="m">${vs.length} visitas · descuentos dados $${dsc}</p></div><div class="tiles">${keys.map(k=>`<div class="tile"><span class="m">${esc(k)}</span><b>${(S[k]||{n:0}).n}</b><span class="m">$${(S[k]||{m:0}).m}</span></div>`).join('')}<div class="tile"><span class="m">Diseños</span><b>${dn.length}</b><span class="m">$${dt}</span></div></div><div class="card"><b>Detalle</b>${vs.map(v=>`<div class="row"><span>${new Date(v.t).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})} ${esc(v.nombre)}<br><span class="m">${esc(v.serv)}${v.desc?' · '+v.desc*100+'%':''}${v.dis?' · diseño $'+v.dis:''}${v.barbero?' · '+esc(v.barbero):''}</span></span><b>$${v.total+(v.dis||0)}</b></div>`).join('')||'<p class="m">Sin visitas hoy.</p>'}</div><button id="cr">Cerrar turno</button><p id="er" class="m" role="alert"></p>`;
- $('#cr').onclick=async()=>{if(!confirm('¿Cerrar el turno de hoy con $'+tot+'?'))return;try{await setDoc(doc(db,'shops',B,'cierres',hoy),{fecha:hoy,visitas:vs.length,total:tot,descuentos:dsc,porServicio:S,disenos:{n:dn.length,total:dt},cerrado:Date.now()});$('#er').textContent='Turno cerrado y guardado.'}catch(e){$('#er').textContent='No se guardó: '+e.code}}}
+const iso=d=>d.toLocaleDateString('sv-SE'),pd=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c)};
+async function resTab(sel){
+ sel=sel||{p:'d',f:iso(new Date()),b:''};const dueno=ROL=='dueno';let d1=sel.f,d2=sel.f;
+ if(sel.p=='s'){const x=pd(sel.f),w=(x.getDay()+6)%7;d1=iso(new Date(x.getFullYear(),x.getMonth(),x.getDate()-w));d2=iso(new Date(x.getFullYear(),x.getMonth(),x.getDate()-w+6))}
+ if(sel.p=='m'){const x=pd(sel.f);d1=iso(new Date(x.getFullYear(),x.getMonth(),1));d2=iso(new Date(x.getFullYear(),x.getMonth()+1,0))}
+ $('#b').innerHTML='<p class="m">Cargando…</p>';let vs,cie=null;
+ try{const C=collection(db,'shops',B,'ventas');
+  vs=(await getDocs(dueno?query(C,where('fecha','>=',d1),where('fecha','<=',d2)):query(C,where('bem','==',BEM),where('fecha','==',sel.f)))).docs.map(d=>d.data());
+  if(dueno&&sel.p=='d'){const c=await getDoc(doc(db,'shops',B,'cierres',d1));cie=c.exists()?c.data():null}}
+ catch(e){return $('#b').innerHTML='<div class="card">No se pudo leer el resumen: '+e.code+'</div>'}
+ const bs=[...new Set(vs.map(v=>v.barbero||'—'))];if(sel.b)vs=vs.filter(v=>(v.barbero||'—')==sel.b);vs.sort((a,b)=>a.t-b.t);
+ const S={},PB={};vs.forEach(v=>{const o=S[v.serv]=S[v.serv]||{n:0,m:0};o.n++;o.m+=v.total;const q=PB[v.barbero||'—']=PB[v.barbero||'—']||{n:0,m:0};q.n++;q.m+=v.total+(v.dis||0)});
+ const dn=vs.filter(v=>v.dis>0),dt=dn.reduce((a,v)=>a+v.dis,0),tot=vs.reduce((a,v)=>a+v.total+(v.dis||0),0),dsc=vs.reduce((a,v)=>a+Math.round(v.precio-v.total),0),keys=[...new Set([...Object.keys(cf.precios),...Object.keys(S)])],rg=d1==d2;
+ const go=r=>resTab({p:$('#pp').value,f:$('#pf').value||sel.f,b:r?'':(dueno&&$('#pb')?$('#pb').value:'')});
+ $('#b').innerHTML=`<div class="card"><label for="pp">Periodo</label><select id="pp">${[['d','Día'],['s','Semana (lun–dom)'],['m','Mes']].filter(x=>dueno||x[0]=='d').map(([k,n])=>`<option value="${k}" ${k==sel.p?'selected':''}>${n}</option>`).join('')}</select><label for="pf">Fecha</label><input id="pf" type="date" value="${sel.f}">${dueno?`<label for="pb">Barbero</label><select id="pb"><option value="">Todos</option>${bs.map(x=>`<option ${x==sel.b?'selected':''}>${esc(x)}</option>`).join('')}</select>`:''}</div>
+ <div class="card hero"><b>${dueno?'':'Mis cobros · '}${rg?d1:d1+' a '+d2}</b><div class="n">$${tot}</div><p class="m">${vs.length} ${vs.length==1?'visita':'visitas'} · descuentos dados $${dsc}</p></div>
+ <div class="tiles">${keys.map(k=>`<div class="tile"><span class="m">${esc(k)}</span><b>${(S[k]||{n:0}).n}</b><span class="m">$${(S[k]||{m:0}).m}</span></div>`).join('')}<div class="tile"><span class="m">Diseños</span><b>${dn.length}</b><span class="m">$${dt}</span></div></div>
+ ${dueno&&!sel.b?`<div class="card"><b>Por barbero</b>${Object.entries(PB).map(([k,v])=>`<div class="row"><span>${esc(k)}</span><span>${v.n} · $${v.m}</span></div>`).join('')||'<p class="m">Sin visitas.</p>'}</div>`:''}
+ <div class="card"><b>Detalle</b>${vs.slice(0,200).map(v=>`<div class="row"><span>${rg?'':v.fecha+' '}${new Date(v.t).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})} ${esc(v.nombre)}<br><span class="m">${esc(v.serv)}${v.desc?' · '+v.desc*100+'%':''}${v.dis?' · diseño $'+v.dis:''}${v.barbero?' · '+esc(v.barbero):''}</span></span><b>$${v.total+(v.dis||0)}</b></div>`).join('')||'<p class="m">Sin visitas en este periodo.</p>'}</div>
+ ${dueno&&sel.p=='d'&&!sel.b?(cie?`<p class="m">Turno cerrado con $${cie.total}.</p><button class="s" id="ro">Reabrir día</button>`:'<button id="cr">Cerrar turno</button>'):''}<p id="er" class="m" role="alert"></p>`;
+ $('#pp').onchange=$('#pf').onchange=()=>go(true);if($('#pb'))$('#pb').onchange=()=>go(false);
+ if($('#cr'))$('#cr').onclick=async()=>{if(!confirm('¿Cerrar el turno del '+d1+' con $'+tot+'? Después no se podrán registrar ni deshacer visitas de ese día.'))return;try{await setDoc(doc(db,'shops',B,'cierres',d1),{fecha:d1,visitas:vs.length,total:tot,descuentos:dsc,porServicio:S,porBarbero:PB,disenos:{n:dn.length,total:dt},cerrado:Date.now(),por:NOM});resTab(sel)}catch(e){$('#er').textContent='No se guardó: '+e.code}};
+ if($('#ro'))$('#ro').onclick=async()=>{if(!confirm('¿Reabrir el día '+d1+'?'))return;try{await deleteDoc(doc(db,'shops',B,'cierres',d1));resTab(sel)}catch(e){$('#er').textContent='No se pudo reabrir: '+e.code}}}
 function prTab(){
  let p={...cf.precios};const rd=()=>document.querySelectorAll('[data-k]').forEach(i=>p[i.dataset.k]=Math.max(0,+i.value||0));
  const dr=()=>{$('#b').innerHTML=`<div class="card">${Object.keys(p).map(k=>`<div class="row"><span>${esc(k)}</span><span><input style="width:80px;margin:0" type="number" min="0" data-k="${esc(k)}" value="${p[k]}"> <button class="s" style="display:inline-block;width:auto;padding:8px 12px" data-d="${esc(k)}" aria-label="Eliminar ${esc(k)}">✕</button></span></div>`).join('')}<p><b>Agregar servicio</b></p><input id="nn" placeholder="Nombre" maxlength="30"><input id="np" type="number" min="0" placeholder="Precio"><button class="s" id="ad">Agregar</button><button id="gp">Guardar precios</button><p id="er" class="m" role="alert"></p></div>`;
@@ -196,6 +212,7 @@ function verif(u){V.innerHTML=`<div class="card"><h2>Confirma tu correo</h2><p>N
  $('#en').onclick=async()=>{try{await sendEmailVerification(u);$('#er').textContent='Enviado. Revisa tu correo y la carpeta de spam.'}catch(e){$('#er').textContent='No se pudo enviar: '+e.code}};
  $('#ya').onclick=async()=>{await u.reload();await u.getIdToken(true);u.emailVerified?entrar(auth.currentUser):$('#er').textContent='Aún no aparece confirmado.'}}
 async function entrar(u){
+ BEM=u.email.toLowerCase();
  if(u.email===ADMIN){ROL='dueno';NOM='Master'}else{let d;try{d=await getDoc(doc(db,'shops',B,'admins',u.email.toLowerCase()))}catch(e){}
   if(!d||!d.exists())return sinAcc('Tu correo no tiene acceso a esta barbería.');ROL=d.data().rol;NOM=d.data().nombre||u.email;if(!u.emailVerified)return verif(u)}
  admin()}
