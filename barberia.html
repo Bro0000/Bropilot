@@ -43,7 +43,7 @@ setTimeout(function(){var v=document.getElementById('v');if(v&&/^\s*<p class="m"
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged,sendEmailVerification,sendPasswordResetEmail,createUserWithEmailAndPassword}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import{getFirestore,doc,getDoc,setDoc,onSnapshot,collection,query,orderBy,limit,writeBatch,getDocs,where,deleteField,deleteDoc}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import{getFirestore,doc,getDoc,setDoc,onSnapshot,collection,query,orderBy,limit,writeBatch,getDocs,where,deleteField,deleteDoc,addDoc,serverTimestamp}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 const app=initializeApp({
 apiKey:"AIzaSyAJ382B7G2sZjhXg2OB1fzJVioQn7sMGbk",
 authDomain:"adminbr0.firebaseapp.com",
@@ -59,6 +59,16 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const EMO=['✂️💈','🎃💀','🎄🎅','🔥💪','🏆⚽','🇲🇽🦅','❤️✂️','☀️😎'];
 const D0={aviso:'',emo:EMO[0],wa:'',waMsg:'Hola, quiero agendar una cita',ig:'',fb:'',precios:{'Corte':150,'Barba':100,'Ceja':50,'Corte y barba':230,'Corte, barba y ceja':270}};
 const cfgRef=B?doc(db,'shops',B,'config','main'):null,URLB=location.origin+location.pathname;
+const TERM={v:1,t:`TÉRMINOS DE USO PARA BARBERÍAS · Versión 1
+
+1. Qué es. Herramienta digital de tarjetas de fidelidad y registro de visitas, ofrecida por el Proveedor de la plataforma a la barbería. Se ofrece "tal cual", sin garantía de disponibilidad continua.
+2. Responsable de los datos. La barbería es responsable de los datos de sus clientes y del uso que les dé, incluido entregarles su aviso de privacidad.
+3. Acceso del Proveedor. El Proveedor puede ver clientes, visitas y cobros de todas las barberías, solo para soporte y mantenimiento. No los compartirá ni los usará para otros fines.
+4. Almacenamiento. Los datos se guardan en Firebase, servicio de Google.
+5. Cuentas. Cada administrador cuida su contraseña y no la comparte. El dueño autoriza a sus barberos y responde por el uso que hagan del acceso.
+6. Baja. Si la barbería se desactiva, sus datos se conservan 30 días. Antes de borrarlos se le entrega un respaldo.
+7. Costo. Gratuito durante la prueba. Cualquier cobro se acordará por separado y con aviso previo.
+8. Cambios. Si estos términos cambian, se pedirá aceptar la nueva versión para seguir usando el sitio.`};
 const mk=()=>[...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,'0')).join('');
 const vig=(d,h)=>{const x=new Date().toLocaleDateString('sv-SE');return(!d||x>=d)&&(!h||x<=h)},okLg=s=>/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(s||''),okC=c=>/^#[0-9a-fA-F]{6}$/.test(c||''),thm=f=>(okC(f.c1)?`--r:${f.c1};`:'')+(okC(f.c2)?`--b:${f.c2};`:'');
 async function getCfg(){try{const s=await getDoc(cfgRef);return{...D0,...(s.exists()?s.data():{})}}catch(e){return D0}}
@@ -245,16 +255,30 @@ async function panel(){
  try{sh=(await Promise.race([getDocs(collection(db,'shops')),new Promise((_,r)=>setTimeout(()=>r({code:'tiempo-agotado'}),10000))])).docs.map(d=>({id:d.id,...d.data()}))}catch(e){return V.innerHTML='<div class="card">No se pudo leer las barberías: '+e.code+'</div>'}
  const lgs=await Promise.all(sh.map(s=>getDoc(doc(db,'shops',s.id,'config','main')).then(x=>x.exists()&&okLg(x.data().logo)?x.data().logo:'').catch(()=>'')));
  V.innerHTML=`<header class="hd"><span>💈 Panel master</span><button class="s" id="so">Salir</button></header>
- <div class="card"><b>Nueva barbería</b><input id="nn" placeholder="Nombre (ej. Barbería el Wero)" maxlength="40" aria-label="Nombre"><input id="ns" placeholder="Enlace corto (ej. el-wero)" maxlength="30" aria-label="Enlace corto"><button id="nb">Crear barbería</button><p id="er" class="m" role="alert"></p></div>
+ <button class="s" id="ev">Aceptación de términos</button><div class="card"><b>Nueva barbería</b><input id="nn" placeholder="Nombre (ej. Barbería el Wero)" maxlength="40" aria-label="Nombre"><input id="ns" placeholder="Enlace corto (ej. el-wero)" maxlength="30" aria-label="Enlace corto"><button id="nb">Crear barbería</button><p id="er" class="m" role="alert"></p></div>
  ${sh.map((s,i)=>`<div class="card">${lgs[i]?`<img src="${lgs[i]}" alt="" style="width:44px;height:44px;object-fit:contain;vertical-align:middle;margin-right:8px">`:''}<b>${esc(s.nombre||s.id)}</b> <span class="m">· ${s.activo===false?'desactivada':'activa'} · ${esc(s.id)}</span>
  <a class="b s" href="?b=${esc(s.id)}">Abrir como administrador</a><button class="s" data-a="${esc(s.id)}">QR y enlace de administradores</button><button class="s" data-c="${esc(s.id)}">QR y enlace de clientes</button><button class="s" data-i="${esc(s.id)}">Administradores e invitaciones</button><button class="s" data-t="${esc(s.id)}">${s.activo===false?'Reactivar':'Desactivar'}</button></div>`).join('')}`;
  $('#so').onclick=()=>signOut(auth);
+ $('#ev').onclick=()=>evDlg(sh);
  $('#nb').onclick=async()=>{const nombre=$('#nn').value.trim(),id=$('#ns').value.trim().toLowerCase(),er=$('#er');
   if(!nombre||!/^[a-z0-9-]{3,30}$/.test(id))return er.textContent='Escribe un nombre y un enlace de 3 a 30 letras minúsculas, números o guiones.';
   try{if((await getDoc(doc(db,'shops',id))).exists())return er.textContent='Ese enlace ya existe.';await setDoc(doc(db,'shops',id),{nombre,activo:true});panel()}catch(e){er.textContent='No se pudo crear: '+e.code}};
  document.querySelectorAll('[data-t]').forEach(x=>x.onclick=async()=>{const s=sh.find(y=>y.id==x.dataset.t),on=s.activo===false;if(!confirm((on?'¿Reactivar ':'¿Desactivar ')+(s.nombre||s.id)+'?'))return;try{await setDoc(doc(db,'shops',s.id),{activo:on},{merge:true});panel()}catch(e){alert('No se pudo: '+e.code)}});
  document.querySelectorAll('[data-a],[data-c]').forEach(x=>x.onclick=()=>{const id=x.dataset.a||x.dataset.c;qrDlg(id,x.dataset.a?'a':'c',sh.find(y=>y.id==id).nombre||id)});
  document.querySelectorAll('[data-i]').forEach(x=>x.onclick=()=>adminsDlg(x.dataset.i))}
+function termsScreen(u,next){
+ V.innerHTML=`<div class="card"><h2>Términos de uso</h2><div style="max-height:46vh;overflow:auto;white-space:pre-wrap;font-size:15px;border:1px solid var(--l);border-radius:10px;padding:10px">${esc(TERM.t)}</div><label style="display:block;margin:12px 0"><input type="checkbox" id="ok" style="width:auto;margin-right:8px">He leído y acepto los términos (versión ${TERM.v})</label><button id="ac">Aceptar y continuar</button><button class="s" id="so">Salir</button><p id="er" class="m" role="alert"></p></div>`;
+ $('#so').onclick=()=>signOut(auth);
+ $('#ac').onclick=async()=>{if(!$('#ok').checked)return $('#er').textContent='Marca la casilla para continuar.';$('#ac').disabled=true;
+  try{await addDoc(collection(db,'shops',B,'aceptaciones'),{email:BEM,nombre:NOM,rol:ROL,version:TERM.v,texto:TERM.t,fecha:serverTimestamp(),verificado:!!u.emailVerified,ua:navigator.userAgent.slice(0,150)});next()}catch(e){$('#er').textContent='No se pudo guardar: '+e.code;$('#ac').disabled=false}}}
+async function evDlg(sh){
+ const m=modal('<p class="m">Cargando…</p>'),ALL=[];let h=`<b>Aceptación de términos</b><p class="m">Versión vigente: ${TERM.v}</p>`;
+ for(const s of sh){let A=[],C=[];try{A=(await getDocs(collection(db,'shops',s.id,'admins'))).docs.map(d=>({e:d.id,...d.data()}));C=(await getDocs(collection(db,'shops',s.id,'aceptaciones'))).docs.map(d=>d.data())}catch(e){}
+  C.forEach(c=>ALL.push({barberia:s.id,...c,fecha:c.fecha&&c.fecha.toDate?c.fecha.toDate().toISOString():null}));
+  h+=`<p><b>${esc(s.nombre||s.id)}</b></p>`+(A.map(a=>{const u=C.filter(c=>c.email==a.e).sort((x,y)=>y.version-x.version||((y.fecha&&y.fecha.seconds)||0)-((x.fecha&&x.fecha.seconds)||0))[0],est=!u?'Pendiente':u.version==TERM.v?'Al día':'Desactualizado';
+   return`<div class="row"><span>${esc(a.nombre||'')} · ${esc(a.rol)}<br><span class="m">${esc(a.e)}</span></span><span style="text-align:right">${est}<br><span class="m">${u?'v'+u.version+(u.fecha&&u.fecha.toDate?' · '+u.fecha.toDate().toLocaleString('es-MX'):''):''}</span></span></div>`}).join('')||'<p class="m">Sin administradores.</p>')}
+ m.innerHTML=h+'<button id="dv">Descargar evidencia (con textos)</button><button class="s" id="cl">Cerrar</button>';m.querySelector('#cl').onclick=m.close;
+ m.querySelector('#dv').onclick=()=>{const b=new Blob([JSON.stringify(ALL,null,1)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='evidencia-terminos.json';a.click()}}
 function sinAcc(m){V.innerHTML=`<div class="card"><h2>Sin acceso</h2><p>${m}</p><button class="s" id="so">Salir</button></div>`;$('#so').onclick=()=>signOut(auth)}
 function verif(u){V.innerHTML=`<div class="card"><h2>Confirma tu correo</h2><p>Necesitamos confirmar que ${esc(u.email)} es tuyo.</p><button id="en">Enviar correo de confirmación</button><button class="s" id="ya">Ya lo confirmé</button><p id="er" class="m" role="alert"></p></div>`;
  $('#en').onclick=async()=>{try{await sendEmailVerification(u);$('#er').textContent='Enviado. Revisa tu correo y la carpeta de spam.'}catch(e){$('#er').textContent='No se pudo enviar: '+e.code}};
@@ -262,7 +286,8 @@ function verif(u){V.innerHTML=`<div class="card"><h2>Confirma tu correo</h2><p>N
 async function entrar(u){
  BEM=u.email.toLowerCase();
  if(u.email===ADMIN){if(!u.emailVerified)return verif(u);ROL='dueno';NOM='Master'}else{let d;try{d=await getDoc(doc(db,'shops',B,'admins',u.email.toLowerCase()))}catch(e){}
-  if(!d||!d.exists())return sinAcc('Tu correo no tiene acceso a esta barbería.');ROL=d.data().rol;NOM=d.data().nombre||u.email;if(!u.emailVerified)return verif(u)}
+  if(!d||!d.exists())return sinAcc('Tu correo no tiene acceso a esta barbería.');ROL=d.data().rol;NOM=d.data().nombre||u.email;let okT=false;try{okT=!(await getDocs(query(collection(db,'shops',B,'aceptaciones'),where('email','==',BEM),where('version','==',TERM.v),limit(1)))).empty}catch(e){}
+  if(!okT)return termsScreen(u,()=>entrar(u));if(!u.emailVerified)return verif(u)}
  B?admin():panel()}
 onAuthStateChanged(auth,async u=>{
  if(P.has('master')){if(!u){SH={nombre:'Acceso master'};return login()}return u.email===ADMIN?entrar(u):sinAcc('Esta cuenta no es de master.')}
