@@ -41,7 +41,7 @@ L('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js')
 <body><main id="v"><p class="m">Cargando…</p></main>
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged,sendEmailVerification,sendPasswordResetEmail}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged,sendEmailVerification,sendPasswordResetEmail,createUserWithEmailAndPassword}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import{getFirestore,doc,getDoc,setDoc,onSnapshot,collection,query,orderBy,limit,writeBatch,getDocs,where,deleteField,deleteDoc}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 const app=initializeApp({
 apiKey:"AIzaSyAJ382B7G2sZjhXg2OB1fzJVioQn7sMGbk",
@@ -98,13 +98,13 @@ function altaView(){
 
 /* ---------- Administrador ---------- */
 function login(){
- V.innerHTML=`<div class="card"><div style="font-size:56px;line-height:1">💈</div><h2>${esc(SH.nombre||'Administrador')}</h2><p class="m">Acceso de administradores</p><input id="em" type="email" aria-label="Correo" placeholder="Correo"><input id="pw" type="password" aria-label="Contraseña" placeholder="Contraseña"><button id="go">Entrar</button><button class="s" id="fg">Olvidé mi contraseña</button><p id="er" class="m" role="alert"></p></div>`;
- $('#fg').onclick=async()=>{const e=$('#em').value.trim();if(!e)return $('#er').textContent='Escribe tu correo arriba.';try{await sendPasswordResetEmail(auth,e);$('#er').textContent='Te enviamos un correo para crear una contraseña nueva.'}catch(x){$('#er').textContent='No se pudo enviar el correo.'}};$('#go').onclick=()=>signInWithEmailAndPassword(auth,$('#em').value.trim(),$('#pw').value).catch(()=>$('#er').textContent='Correo o contraseña incorrectos.')}
+ V.innerHTML=`<div class="card"><div style="font-size:56px;line-height:1">💈</div><h2>${esc(SH.nombre||'Administrador')}</h2><p class="m">Acceso de administradores</p><input id="em" type="email" aria-label="Correo" placeholder="Correo"><input id="pw" type="password" aria-label="Contraseña" placeholder="Contraseña"><button id="go">Entrar</button><button class="s" id="fg">Olvidé mi contraseña</button><button class="s" id="cc">Crear cuenta (me invitaron)</button><p id="er" class="m" role="alert"></p></div>`;
+ $('#cc').onclick=async()=>{const e=$('#em').value.trim(),p=$('#pw').value;if(!e||p.length<8)return $('#er').textContent='Escribe tu correo y una contraseña de 8 o más caracteres arriba.';try{await createUserWithEmailAndPassword(auth,e,p)}catch(x){$('#er').textContent=x.code=='auth/email-already-in-use'?'Ese correo ya tiene cuenta. Usa Entrar.':'No se pudo crear la cuenta.'}};$('#fg').onclick=async()=>{const e=$('#em').value.trim();if(!e)return $('#er').textContent='Escribe tu correo arriba.';try{await sendPasswordResetEmail(auth,e);$('#er').textContent='Te enviamos un correo para crear una contraseña nueva.'}catch(x){$('#er').textContent='No se pudo enviar el correo.'}};$('#go').onclick=()=>signInWithEmailAndPassword(auth,$('#em').value.trim(),$('#pw').value).catch(()=>$('#er').textContent='Correo o contraseña incorrectos.')}
 async function admin(){cf=await getCfg();CL=(await getDocs(collection(db,'shops',B,'clientes'))).docs.map(d=>({id:d.id,...d.data()}));tab('r')}
 const TB=[['r','✂️','Registrar'],['c','👥','Clientes'],['s','📊','Resumen'],['p','💲','Precios'],['d','🎨','Tarjeta']];
 const ofl=()=>{const e=$('#of');if(e)e.style.display=navigator.onLine?'none':'block'};addEventListener('online',ofl);addEventListener('offline',ofl);
 function tab(t){
- V.innerHTML=`<header class="hd"><span>💈 ${esc(SH.nombre||'Panel')}</span><button class="s" id="so">Salir</button></header><div id="of" class="m" style="display:none;color:var(--r)" role="alert">Sin conexión: no registres visitas hasta que regrese.</div><nav>${TB.filter(x=>ROL=='dueno'||'rcs'.includes(x[0])).map(([k,i,n])=>`<button class="${k==t?'':'s'}" data-t="${k}"><b>${i}</b>${n}</button>`).join('')}</nav><div id="b"></div>`;
+ V.innerHTML=`<header class="hd"><span>💈 ${esc(SH.nombre||'Panel')} ${NOM=='Master'?'<a class="m" href="?master" style="font-size:14px">← Panel</a>':''}</span><button class="s" id="so">Salir</button></header><div id="of" class="m" style="display:none;color:var(--r)" role="alert">Sin conexión: no registres visitas hasta que regrese.</div><nav>${TB.filter(x=>ROL=='dueno'||'rcs'.includes(x[0])).map(([k,i,n])=>`<button class="${k==t?'':'s'}" data-t="${k}"><b>${i}</b>${n}</button>`).join('')}</nav><div id="b"></div>`;
  document.querySelectorAll('[data-t]').forEach(x=>x.onclick=()=>tab(x.dataset.t));$('#so').onclick=()=>signOut(auth);
  ({r:regTab,c:cliTab,s:resTab,p:prTab,d:cfgTab})[t]();ofl()}
 function regTab(){
@@ -207,16 +207,52 @@ function cfgTab(){
   if((n.avD&&n.avH&&n.avD>n.avH)||(n.emD&&n.emH&&n.emD>n.emH))return er.textContent='La fecha "desde" debe ser antes de "hasta".';
   try{await setDoc(cfgRef,n,{merge:true});cf={...cf,...n};er.textContent='Guardado. Los clientes ya ven los cambios.'}catch(e){er.textContent='No se guardó: '+e.code}}}
 
+const modal=h=>{const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:20;overflow:auto;padding:16px';const c=document.createElement('div');c.className='card';c.style.cssText='max-width:460px;margin:20px auto';c.innerHTML=h;c.close=()=>o.remove();o.append(c);document.body.append(o);return c};
+function qrCanvas(url,tit,nom,col){
+ const q=qrcode(0,'M');q.addData(url);q.make();const n=q.getModuleCount(),k=8,m=4,W=(n+2*m)*k,c=document.createElement('canvas');c.width=Math.max(W+80,520);c.height=W+250;const g=c.getContext('2d');
+ g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.fillStyle=col;g.fillRect(0,0,c.width,110);g.fillStyle='#fff';g.textAlign='center';g.font='bold 26px Arial';g.fillText(tit,c.width/2,66);
+ g.fillStyle='#12202F';g.font='bold 30px Arial';g.fillText(nom,c.width/2,160);g.translate((c.width-W)/2,185);
+ for(let r=0;r<n;r++)for(let s=0;s<n;s++)if(q.isDark(r,s))g.fillRect((s+m)*k,(r+m)*k,k,k);return c}
+function qrDlg(id,k,nom){
+ if(!window.qrcode)return alert('No cargó el generador de QR. Recarga la página.');
+ const url=URLB+'?b='+id+(k=='c'?'&alta':''),c=qrCanvas(url,k=='a'?'SOLO ADMINISTRADORES':'CREA TU TARJETA DE FIDELIDAD',nom,k=='a'?'#1F4E8C':'#C8102E'),
+ m=modal(`<b>${k=='a'?'Entrada de administradores':'Registro de clientes'} · ${esc(nom)}</b><img src="${c.toDataURL()}" alt="Código QR" style="width:100%;margin:10px 0"><p class="m" style="word-break:break-all">${esc(url)}</p><button id="dw">Descargar imagen</button><button class="s" id="cp">Copiar enlace</button><button class="s" id="cl">Cerrar</button>`);
+ m.querySelector('#cl').onclick=m.close;m.querySelector('#cp').onclick=()=>navigator.clipboard.writeText(url).then(()=>alert('Enlace copiado'));
+ m.querySelector('#dw').onclick=()=>c.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`qr-${k=='a'?'admin':'clientes'}-${id}.png`;a.click()})}
+async function adminsDlg(id){
+ const m=modal('<p class="m">Cargando…</p>'),q=s=>m.querySelector(s);
+ const r=async()=>{let L=[];try{L=(await getDocs(collection(db,'shops',id,'admins'))).docs.map(d=>({e:d.id,...d.data()}))}catch(e){}
+  m.innerHTML=`<b>Administradores · ${esc(id)}</b>${L.map(a=>`<div class="row"><span>${esc(a.nombre||'')}<br><span class="m">${esc(a.e)} · ${esc(a.rol)}</span></span><button class="s" style="width:auto;padding:6px 12px" data-q="${esc(a.e)}">Quitar</button></div>`).join('')||'<p class="m">Aún no hay administradores.</p>'}<p><b>Invitar</b></p><input id="ie" type="email" placeholder="Correo"><input id="in" placeholder="Nombre" maxlength="30"><select id="ir"><option value="dueno">Dueño</option><option value="barbero">Barbero</option></select><button id="iv">Invitar</button><p id="er2" class="m" role="alert"></p><button class="s" id="cl">Cerrar</button>`;
+  q('#cl').onclick=m.close;
+  m.querySelectorAll('[data-q]').forEach(x=>x.onclick=async()=>{if(!confirm('¿Quitar a '+x.dataset.q+'?'))return;try{await deleteDoc(doc(db,'shops',id,'admins',x.dataset.q))}catch(e){}r()});
+  q('#iv').onclick=async()=>{const e=q('#ie').value.trim().toLowerCase(),n=q('#in').value.trim(),ro=q('#ir').value;if(!/^\S+@\S+\.\S+$/.test(e)||!n)return q('#er2').textContent='Escribe un correo válido y un nombre.';
+   try{await setDoc(doc(db,'shops',id,'admins',e),{nombre:n,rol:ro,invitado:Date.now()});await r();q('#er2').textContent='Listo. Dile que abra '+URLB+'?b='+id+' y toque Crear cuenta.'}catch(x){q('#er2').textContent='No se pudo: '+x.code}}};
+ r()}
+async function panel(){
+ V.innerHTML='<p class="m">Cargando…</p>';let sh=[];
+ try{sh=(await getDocs(collection(db,'shops'))).docs.map(d=>({id:d.id,...d.data()}))}catch(e){return V.innerHTML='<div class="card">No se pudo leer las barberías: '+e.code+'</div>'}
+ V.innerHTML=`<header class="hd"><span>💈 Panel master</span><button class="s" id="so">Salir</button></header>
+ <div class="card"><b>Nueva barbería</b><input id="nn" placeholder="Nombre (ej. Barbería el Wero)" maxlength="40" aria-label="Nombre"><input id="ns" placeholder="Enlace corto (ej. el-wero)" maxlength="30" aria-label="Enlace corto"><button id="nb">Crear barbería</button><p id="er" class="m" role="alert"></p></div>
+ ${sh.map(s=>`<div class="card"><b>${esc(s.nombre||s.id)}</b> <span class="m">· ${s.activo===false?'desactivada':'activa'} · ${esc(s.id)}</span>
+ <a class="b s" href="?b=${esc(s.id)}">Abrir como administrador</a><button class="s" data-a="${esc(s.id)}">QR y enlace de administradores</button><button class="s" data-c="${esc(s.id)}">QR y enlace de clientes</button><button class="s" data-i="${esc(s.id)}">Administradores e invitaciones</button><button class="s" data-t="${esc(s.id)}">${s.activo===false?'Reactivar':'Desactivar'}</button></div>`).join('')}`;
+ $('#so').onclick=()=>signOut(auth);
+ $('#nb').onclick=async()=>{const nombre=$('#nn').value.trim(),id=$('#ns').value.trim().toLowerCase(),er=$('#er');
+  if(!nombre||!/^[a-z0-9-]{3,30}$/.test(id))return er.textContent='Escribe un nombre y un enlace de 3 a 30 letras minúsculas, números o guiones.';
+  try{if((await getDoc(doc(db,'shops',id))).exists())return er.textContent='Ese enlace ya existe.';await setDoc(doc(db,'shops',id),{nombre,activo:true});panel()}catch(e){er.textContent='No se pudo crear: '+e.code}};
+ document.querySelectorAll('[data-t]').forEach(x=>x.onclick=async()=>{const s=sh.find(y=>y.id==x.dataset.t),on=s.activo===false;if(!confirm((on?'¿Reactivar ':'¿Desactivar ')+(s.nombre||s.id)+'?'))return;try{await setDoc(doc(db,'shops',s.id),{activo:on},{merge:true});panel()}catch(e){alert('No se pudo: '+e.code)}});
+ document.querySelectorAll('[data-a],[data-c]').forEach(x=>x.onclick=()=>{const id=x.dataset.a||x.dataset.c;qrDlg(id,x.dataset.a?'a':'c',sh.find(y=>y.id==id).nombre||id)});
+ document.querySelectorAll('[data-i]').forEach(x=>x.onclick=()=>adminsDlg(x.dataset.i))}
 function sinAcc(m){V.innerHTML=`<div class="card"><h2>Sin acceso</h2><p>${m}</p><button class="s" id="so">Salir</button></div>`;$('#so').onclick=()=>signOut(auth)}
 function verif(u){V.innerHTML=`<div class="card"><h2>Confirma tu correo</h2><p>Necesitamos confirmar que ${esc(u.email)} es tuyo.</p><button id="en">Enviar correo de confirmación</button><button class="s" id="ya">Ya lo confirmé</button><p id="er" class="m" role="alert"></p></div>`;
  $('#en').onclick=async()=>{try{await sendEmailVerification(u);$('#er').textContent='Enviado. Revisa tu correo y la carpeta de spam.'}catch(e){$('#er').textContent='No se pudo enviar: '+e.code}};
  $('#ya').onclick=async()=>{await u.reload();await u.getIdToken(true);u.emailVerified?entrar(auth.currentUser):$('#er').textContent='Aún no aparece confirmado.'}}
 async function entrar(u){
  BEM=u.email.toLowerCase();
- if(u.email===ADMIN){ROL='dueno';NOM='Master'}else{let d;try{d=await getDoc(doc(db,'shops',B,'admins',u.email.toLowerCase()))}catch(e){}
+ if(u.email===ADMIN){if(!u.emailVerified)return verif(u);ROL='dueno';NOM='Master'}else{let d;try{d=await getDoc(doc(db,'shops',B,'admins',u.email.toLowerCase()))}catch(e){}
   if(!d||!d.exists())return sinAcc('Tu correo no tiene acceso a esta barbería.');ROL=d.data().rol;NOM=d.data().nombre||u.email;if(!u.emailVerified)return verif(u)}
- admin()}
+ B?admin():panel()}
 onAuthStateChanged(auth,async u=>{
+ if(P.has('master')){if(!u){SH={nombre:'Acceso master'};return login()}return u.email===ADMIN?entrar(u):sinAcc('Esta cuenta no es de master.')}
  if(!B)return V.innerHTML='<div class="card"><h2>Abre el enlace de tu barbería</h2><p class="m">Pídelo a tu barbero o escanea su QR.</p></div>';
  try{const s=await getDoc(doc(db,'shops',B));if(!s.exists()||s.data().activo===false)throw 0;SH=s.data()}catch(e){return V.innerHTML='<div class="card"><h2>Barbería no disponible</h2></div>'}
  if(P.get('c')){document.title='Mi tarjeta · '+(SH.nombre||'');if(!cvOn){cvOn=1;clientView(P.get('c'))}return}
