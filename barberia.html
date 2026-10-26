@@ -58,7 +58,7 @@ const a2h=()=>{if(DP){DP.prompt();return}alert(/iPhone|iPad|iPod/.test(navigator
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const EMO=['✂️💈','🎃💀','🎄🎅','🔥💪','🏆⚽','🇲🇽🦅','❤️✂️','☀️😎'];
 const D0={aviso:'',emo:EMO[0],wa:'',waMsg:'Hola, quiero agendar una cita',ig:'',fb:'',precios:{'Corte':150,'Barba':100,'Ceja':50,'Corte y barba':230,'Corte, barba y ceja':270}};
-const cfgRef=doc(db,'shops',B,'config','main'),URLB=location.origin+location.pathname;
+const cfgRef=B?doc(db,'shops',B,'config','main'):null,URLB=location.origin+location.pathname;
 const mk=()=>[...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,'0')).join('');
 const vig=(d,h)=>{const x=new Date().toLocaleDateString('sv-SE');return(!d||x>=d)&&(!h||x<=h)},okC=c=>/^#[0-9a-fA-F]{6}$/.test(c||''),thm=f=>(okC(f.c1)?`--r:${f.c1};`:'')+(okC(f.c2)?`--b:${f.c2};`:'');
 async function getCfg(){try{const s=await getDoc(cfgRef);return{...D0,...(s.exists()?s.data():{})}}catch(e){return D0}}
