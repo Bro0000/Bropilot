@@ -37,7 +37,8 @@ main{padding-bottom:100px}
 </style>
 <script>function L(u,f){var s=document.createElement('script');s.src=u;s.onerror=f;document.head.appendChild(s)}
 L('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js',function(){L('https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js')});
-L('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js')</script></head>
+L('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js')</script><script>window.__e=[];addEventListener('error',function(e){__e.push(e.message||'error al cargar un archivo')});addEventListener('unhandledrejection',function(e){var r=e.reason;__e.push('Promesa: '+(r&&(r.code||r.message)||r))});
+setTimeout(function(){var v=document.getElementById('v');if(v&&/^\s*<p class="m">Cargando/.test(v.innerHTML))v.insertAdjacentHTML('beforeend','<div class="card"><b>La página no terminó de cargar.</b><p class="m">Versión 2A. '+(__e.join(' | ')||'Sin error visible. Revisa tu conexión y recarga.')+'</p></div>')},8000)</script></head>
 <body><main id="v"><p class="m">Cargando…</p></main>
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
@@ -230,7 +231,7 @@ async function adminsDlg(id){
  r()}
 async function panel(){
  V.innerHTML='<p class="m">Cargando…</p>';let sh=[];
- try{sh=(await getDocs(collection(db,'shops'))).docs.map(d=>({id:d.id,...d.data()}))}catch(e){return V.innerHTML='<div class="card">No se pudo leer las barberías: '+e.code+'</div>'}
+ try{sh=(await Promise.race([getDocs(collection(db,'shops')),new Promise((_,r)=>setTimeout(()=>r({code:'tiempo-agotado'}),10000))])).docs.map(d=>({id:d.id,...d.data()}))}catch(e){return V.innerHTML='<div class="card">No se pudo leer las barberías: '+e.code+'</div>'}
  V.innerHTML=`<header class="hd"><span>💈 Panel master</span><button class="s" id="so">Salir</button></header>
  <div class="card"><b>Nueva barbería</b><input id="nn" placeholder="Nombre (ej. Barbería el Wero)" maxlength="40" aria-label="Nombre"><input id="ns" placeholder="Enlace corto (ej. el-wero)" maxlength="30" aria-label="Enlace corto"><button id="nb">Crear barbería</button><p id="er" class="m" role="alert"></p></div>
  ${sh.map(s=>`<div class="card"><b>${esc(s.nombre||s.id)}</b> <span class="m">· ${s.activo===false?'desactivada':'activa'} · ${esc(s.id)}</span>
