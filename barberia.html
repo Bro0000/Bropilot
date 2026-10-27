@@ -43,7 +43,7 @@ setTimeout(function(){var v=document.getElementById('v');if(v&&/^\s*<p class="m"
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged,sendEmailVerification,sendPasswordResetEmail,createUserWithEmailAndPassword}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import{getFirestore,doc,getDoc,setDoc,onSnapshot,collection,query,orderBy,limit,writeBatch,getDocs,where,deleteField,deleteDoc,addDoc,serverTimestamp}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import{getFirestore,doc,getDoc,setDoc,onSnapshot,collection,query,orderBy,limit,writeBatch,getDocs,where,deleteField,deleteDoc,addDoc,serverTimestamp,updateDoc}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 const app=initializeApp({
 apiKey:"AIzaSyAJ382B7G2sZjhXg2OB1fzJVioQn7sMGbk",
 authDomain:"adminbr0.firebaseapp.com",
@@ -69,6 +69,14 @@ const TERM={v:1,t:`TÉRMINOS DE USO PARA BARBERÍAS · Versión 1
 6. Baja. Si la barbería se desactiva, sus datos se conservan 30 días. Antes de borrarlos se le entrega un respaldo.
 7. Costo. Gratuito durante la prueba. Cualquier cobro se acordará por separado y con aviso previo.
 8. Cambios. Si estos términos cambian, se pedirá aceptar la nueva versión para seguir usando el sitio.`};
+const AV={v:1,t:`AVISO DE PRIVACIDAD · Versión 1
+
+{negocio} es responsable de tus datos personales.
+Datos que guardamos: tu nombre, tu teléfono y el registro de tus visitas.
+Para qué: llevar tu tarjeta de fidelidad, aplicar tus descuentos y, si lo permites, avisarte de promociones.
+Con quién se comparten: con el proveedor de la plataforma, que solo los usa para dar soporte, y con Google (Firebase), donde se almacenan. No se venden.
+Tus derechos: puedes pedir que veamos, corrijamos o borremos tus datos diciéndoselo a tu barbero o al contacto de la barbería.
+Menores de edad: si el titular de la tarjeta es menor de 18 años, un padre, madre o tutor debe aceptar este aviso en su nombre.`};
 const mk=()=>[...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,'0')).join('');
 const vig=(d,h)=>{const x=new Date().toLocaleDateString('sv-SE');return(!d||x>=d)&&(!h||x<=h)},okLg=s=>/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(s||''),okC=c=>/^#[0-9a-fA-F]{6}$/.test(c||''),thm=f=>(okC(f.c1)?`--r:${f.c1};`:'')+(okC(f.c2)?`--b:${f.c2};`:'');
 async function getCfg(){try{const s=await getDoc(cfgRef);return{...D0,...(s.exists()?s.data():{})}}catch(e){return D0}}
@@ -96,21 +104,25 @@ async function aplicaIcono(f){
  if(f.corto){let m=document.querySelector('meta[name=apple-mobile-web-app-title]');if(!m){m=document.createElement('meta');m.name='apple-mobile-web-app-title';document.head.append(m)}m.content=String(f.corto).slice(0,14)}}
 async function clientView(tok){
  const f=await getCfg();document.body.style.cssText=thm(f)+(okC(f.fondo)?`background:${f.fondo};`:'');aplicaIcono(f);let c=null,vs=[],ready=false;
- const r=()=>{V.innerHTML=c?card(c,vs,f,tok):ready?'<div class="card">No encontramos esta tarjeta. Pide tu enlace al barbero.</div>':'';const a=$('#a2');if(a)a.onclick=a2h};
+ const r=()=>{if(c&&!c.av){avPend(tok);return}V.innerHTML=c?card(c,vs,f,tok):ready?'<div class="card">No encontramos esta tarjeta. Pide tu enlace al barbero.</div>':'';const a=$('#a2');if(a)a.onclick=a2h};
  onSnapshot(doc(db,'shops',B,'clientes',tok),s=>{c=s.exists()?s.data():null;ready=true;r()},()=>{ready=true;r()});
  onSnapshot(query(collection(db,'shops',B,'clientes',tok,'visitas'),orderBy('t','desc'),limit(5)),s=>{vs=s.docs.map(d=>d.data());r()},()=>{})}
 
 /* ---------- Inscripción pública ---------- */
+function avForm(){return `<div style="max-height:34vh;overflow:auto;white-space:pre-wrap;font-size:14px;border:1px solid var(--l);border-radius:10px;padding:10px;margin:8px 0">${esc(AV.t.replace('{negocio}',SH.nombre||'La barbería'))}</div>
+ <label style="display:block;margin:10px 0"><input type="checkbox" id="ok" style="width:auto;margin-right:8px">Soy mayor de edad y acepto el aviso de privacidad. Si esta tarjeta es de un menor a mi cargo, soy su padre, madre o tutor y acepto en su nombre.</label>`}
+function avBind(){}
+function avRead(){if(!$('#ok').checked)return{e:'Marca la casilla para aceptar el aviso.'};return{}}
+function avPend(tok){
+ V.innerHTML=`<div class="card"><h2>Antes de ver tu tarjeta</h2><p class="m">${esc(SH.nombre||'La barbería')} te registró. Lee y acepta el aviso de privacidad para continuar.</p>${avForm()}<button id="go">Aceptar y ver mi tarjeta</button><p id="er" class="m" role="alert"></p></div>`;avBind();
+ $('#go').onclick=async()=>{const a=avRead();if(a.e)return $('#er').textContent=a.e;$('#go').disabled=true;try{await updateDoc(doc(db,'shops',B,'clientes',tok),{av:AV.v,avf:serverTimestamp(),mayor:true})}catch(e){$('#er').textContent='No se pudo guardar. Intenta de nuevo.';$('#go').disabled=false}}}
 function altaView(){
  if(localStorage['mi_'+B])return location.replace('?b='+B+'&c='+localStorage['mi_'+B]);
- V.innerHTML=`<div class="card"><h2>Crea tu tarjeta de fidelidad</h2><label for="nm">Nombre</label><input id="nm" maxlength="60" autocomplete="name"><label for="tl">Teléfono</label><input id="tl" type="tel" maxlength="20" autocomplete="tel">
- <p class="m">Usamos tu nombre y teléfono solo para tu tarjeta y para avisarte de promociones. Puedes pedir que los borremos cuando quieras.</p>
- <label><input type="checkbox" id="ok" style="width:auto;margin-right:8px">Acepto el aviso de privacidad</label><button id="go">Crear mi tarjeta</button><p id="er" class="m" role="alert"></p></div>`;
+ V.innerHTML=`<div class="card"><h2>Crea tu tarjeta de fidelidad</h2><label for="nm">Nombre</label><input id="nm" maxlength="60" autocomplete="name"><label for="tl">Teléfono</label><input id="tl" type="tel" maxlength="20" autocomplete="tel">${avForm()}<button id="go">Crear mi tarjeta</button><p id="er" class="m" role="alert"></p></div>`;avBind();
  $('#go').onclick=async()=>{const nombre=$('#nm').value.trim(),tel=$('#tl').value.trim(),er=$('#er');
   if(!nombre||!/^[0-9+ ()-]{8,20}$/.test(tel))return er.textContent='Escribe tu nombre y un teléfono válido.';
-  if(!$('#ok').checked)return er.textContent='Marca la casilla para aceptar el aviso.';
-  $('#go').disabled=true;const tok=mk();
-  try{await setDoc(doc(db,'shops',B,'clientes',tok),{nombre,tel,n:0,alta:Date.now()});localStorage['mi_'+B]=tok;location.replace('?b='+B+'&c='+tok)}catch(e){er.textContent='No se pudo crear la tarjeta. Intenta de nuevo.';$('#go').disabled=false}}}
+  const a=avRead();if(a.e)return er.textContent=a.e;$('#go').disabled=true;const tok=mk();
+  try{await setDoc(doc(db,'shops',B,'clientes',tok),{nombre,tel,n:0,alta:Date.now(),origen:'cliente',av:AV.v,avf:serverTimestamp(),mayor:true});localStorage['mi_'+B]=tok;location.replace('?b='+B+'&c='+tok)}catch(e){er.textContent='No se pudo crear la tarjeta. Intenta de nuevo.';$('#go').disabled=false}}}
 
 /* ---------- Administrador ---------- */
 function login(){
@@ -130,7 +142,7 @@ function regTab(){
 function pick(id){
  const c=CL.find(x=>x.id==id);if(!c)return alert('Esa tarjeta no está en tu lista. Recarga la página.');
  const num=(c.n||0)+1,dc=num==5?.2:num==10?.5:0;
- $('#pn').innerHTML=`<div class="card"><b>${esc(c.nombre)}</b><div class="n">${c.n||0}/10</div><p>Visita ${num}${dc?` · <b>${dc*100}% de descuento</b>`:''}</p><input type="hidden" id="sv" value="${esc(Object.keys(cf.precios)[0]||'')}"><div class="svc">${Object.entries(cf.precios).map(([k,v],i)=>`<button type="button" data-sv="${esc(k)}" aria-pressed="${i==0}">${esc(k)}<small>$${v}</small></button>`).join('')}</div><input id="ds" type="number" min="0" inputmode="numeric" placeholder="Diseño $ (opcional, sin descuento)" aria-label="Diseño"><p id="tt"></p><button id="ok">Registrar visita</button>${c.lv?'<button class="s" id="un">Deshacer última visita</button>':''}<button class="s" id="rl">Reenviar enlace por WhatsApp</button>${ROL=='dueno'?'<button class="s" id="dl">Eliminar cliente</button>':''}</div>`;
+ $('#pn').innerHTML=`<div class="card"><b>${esc(c.nombre)}</b><p class="m" style="margin:2px 0 6px">${c.origen=='barbero'?'Registrado por '+esc(c.por||'')+' ('+esc(c.rolPor||'')+')':c.origen=='cliente'?'Se registró solo (QR)':'Sin registro'} · Aviso: ${c.av?'aceptado':'pendiente'}</p><div class="n">${c.n||0}/10</div><p>Visita ${num}${dc?` · <b>${dc*100}% de descuento</b>`:''}</p><input type="hidden" id="sv" value="${esc(Object.keys(cf.precios)[0]||'')}"><div class="svc">${Object.entries(cf.precios).map(([k,v],i)=>`<button type="button" data-sv="${esc(k)}" aria-pressed="${i==0}">${esc(k)}<small>$${v}</small></button>`).join('')}</div><input id="ds" type="number" min="0" inputmode="numeric" placeholder="Diseño $ (opcional, sin descuento)" aria-label="Diseño"><p id="tt"></p><button id="ok">Registrar visita</button>${c.lv?'<button class="s" id="un">Deshacer última visita</button>':''}<button class="s" id="rl">Reenviar enlace por WhatsApp</button>${ROL=='dueno'?'<button class="s" id="dl">Eliminar cliente</button>':''}</div>`;
  const t=()=>{$('#tt').innerHTML='Cobrar: <b>$'+(Math.round(cf.precios[$('#sv').value]*(1-dc))+(+$('#ds').value||0))+'</b>'};
  document.querySelectorAll('[data-sv]').forEach(x=>x.onclick=()=>{$('#sv').value=x.dataset.sv;document.querySelectorAll('[data-sv]').forEach(y=>y.setAttribute('aria-pressed',y==x));t()});$('#ds').oninput=t;t();$('#ok').onclick=()=>save(c,num,dc);if(c.lv)$('#un').onclick=()=>undo(c);if($('#dl'))$('#dl').onclick=()=>delC(c);$('#rl').onclick=()=>{const d=(c.tel||'').replace(/\D/g,'');open(`https://wa.me/${d.length==10?'52'+d:d}?text=`+encodeURIComponent(`Hola ${c.nombre}, esta es tu tarjeta de fidelidad: ${URLB}?b=${B}&c=${c.id}`),'_blank')};$('#pn').scrollIntoView()}
 async function save(c,num,dc){
@@ -149,8 +161,8 @@ async function delC(c){
  try{const vs=await getDocs(collection(db,'shops',B,'clientes',c.id,'visitas')),b=writeBatch(db);vs.docs.forEach(d=>b.delete(d.ref));b.delete(doc(db,'shops',B,'clientes',c.id));await b.commit();
   CL=CL.filter(x=>x.id!=c.id);$('#pn').innerHTML='<div class="card"><b>Cliente eliminado</b></div>';$('#q').value='';$('#ls').innerHTML=''}catch(e){alert('No se pudo eliminar: '+e.code)}}
 async function newC(){
- const nombre=(prompt('Nombre del cliente')||'').trim(),tel=(prompt('Teléfono (10 dígitos)')||'').trim();if(!nombre||!tel)return;
- const tok=mk();try{await setDoc(doc(db,'shops',B,'clientes',tok),{nombre,tel,n:0,alta:Date.now()})}catch(e){return alert('No se pudo crear: '+e.code)}
+ const nombre=(prompt('Nombre del cliente')||'').trim(),tel=(prompt('Teléfono (10 dígitos)')||'').trim();if(!nombre||!tel)return;if(!confirm('¿Le informaste al cliente que sus datos sirven para su tarjeta y que puede leer el aviso de privacidad en su enlace?'))return;
+ const tok=mk();try{await setDoc(doc(db,'shops',B,'clientes',tok),{nombre,tel,n:0,alta:Date.now(),origen:'barbero',por:NOM,porEmail:BEM,rolPor:NOM=='Master'?'master':ROL,informado:true})}catch(e){return alert('No se pudo crear: '+e.code)}
  CL.push({id:tok,nombre,tel,n:0});const d=tel.replace(/\D/g,'');
  open(`https://wa.me/${d.length==10?'52'+d:d}?text=`+encodeURIComponent(`Hola ${nombre}, esta es tu tarjeta de fidelidad: ${URLB}?b=${B}&c=${tok}`),'_blank')}
 async function scan(){
@@ -229,6 +241,8 @@ function cfgTab(){
   if((n.avD&&n.avH&&n.avD>n.avH)||(n.emD&&n.emH&&n.emD>n.emH))return er.textContent='La fecha "desde" debe ser antes de "hasta".';
   try{await setDoc(cfgRef,n,{merge:true});cf={...cf,...n};er.textContent='Guardado. Los clientes ya ven los cambios.'}catch(e){er.textContent='No se guardó: '+e.code}}}
 
+function setIcon(h){document.querySelectorAll('link[rel=apple-touch-icon]').forEach(x=>x.remove());const l=document.createElement('link');l.rel='apple-touch-icon';l.href=h;document.head.append(l)}
+function masterIco(){try{const m=localStorage.micono;if(okLg(m))setIcon(m)}catch(e){}document.title='Panel master';let m=document.querySelector('meta[name=apple-mobile-web-app-title]');if(!m){m=document.createElement('meta');m.name='apple-mobile-web-app-title';document.head.append(m)}m.content='Master'}
 const modal=h=>{const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:20;overflow:auto;padding:16px';const c=document.createElement('div');c.className='card';c.style.cssText='max-width:460px;margin:20px auto';c.innerHTML=h;c.close=()=>o.remove();o.append(c);document.body.append(o);return c};
 function qrCanvas(url,tit,nom,col){
  const q=qrcode(0,'M');q.addData(url);q.make();const n=q.getModuleCount(),k=8,m=4,W=(n+2*m)*k,c=document.createElement('canvas');c.width=Math.max(W+80,520);c.height=W+250;const g=c.getContext('2d');
@@ -255,11 +269,16 @@ async function panel(){
  try{sh=(await Promise.race([getDocs(collection(db,'shops')),new Promise((_,r)=>setTimeout(()=>r({code:'tiempo-agotado'}),10000))])).docs.map(d=>({id:d.id,...d.data()}))}catch(e){return V.innerHTML='<div class="card">No se pudo leer las barberías: '+e.code+'</div>'}
  const lgs=await Promise.all(sh.map(s=>getDoc(doc(db,'shops',s.id,'config','main')).then(x=>x.exists()&&okLg(x.data().logo)?x.data().logo:'').catch(()=>'')));
  V.innerHTML=`<header class="hd"><span>💈 Panel master</span><button class="s" id="so">Salir</button></header>
- <button class="s" id="ev">Aceptación de términos</button><div class="card"><b>Nueva barbería</b><input id="nn" placeholder="Nombre (ej. Barbería el Wero)" maxlength="40" aria-label="Nombre"><input id="ns" placeholder="Enlace corto (ej. el-wero)" maxlength="30" aria-label="Enlace corto"><button id="nb">Crear barbería</button><p id="er" class="m" role="alert"></p></div>
+ <button class="s" id="ev">Aceptación de términos</button><button class="s" id="ec">Aceptación de avisos de clientes</button>
+ <div class="card"><b>Ícono de mi acceso directo</b><p class="m">Es el ícono que aparece al guardar este panel en tu pantalla de inicio. Se guarda en este navegador.</p><img id="mip" alt="Ícono actual" src="${(()=>{try{return okLg(localStorage.micono)?localStorage.micono:'icono.png'}catch(e){return 'icono.png'}})()}" style="width:80px;height:80px;border-radius:18px;display:block;margin:8px 0"><label for="mif">Imagen (PNG o JPG)</label><input id="mif" type="file" accept="image/png,image/jpeg"><label for="mic">Color de fondo del ícono</label><input id="mic" type="color" value="#FFFFFF" style="height:46px;padding:4px"><button id="mig">Guardar ícono</button><button class="s" id="mir">Volver al ícono original</button><p id="mie" class="m" role="alert"></p></div><div class="card"><b>Nueva barbería</b><input id="nn" placeholder="Nombre (ej. Barbería el Wero)" maxlength="40" aria-label="Nombre"><input id="ns" placeholder="Enlace corto (ej. el-wero)" maxlength="30" aria-label="Enlace corto"><button id="nb">Crear barbería</button><p id="er" class="m" role="alert"></p></div>
  ${sh.map((s,i)=>`<div class="card">${lgs[i]?`<img src="${lgs[i]}" alt="" style="width:44px;height:44px;object-fit:contain;vertical-align:middle;margin-right:8px">`:''}<b>${esc(s.nombre||s.id)}</b> <span class="m">· ${s.activo===false?'desactivada':'activa'} · ${esc(s.id)}</span>
  <a class="b s" href="?b=${esc(s.id)}">Abrir como administrador</a><button class="s" data-a="${esc(s.id)}">QR y enlace de administradores</button><button class="s" data-c="${esc(s.id)}">QR y enlace de clientes</button><button class="s" data-i="${esc(s.id)}">Administradores e invitaciones</button><button class="s" data-t="${esc(s.id)}">${s.activo===false?'Reactivar':'Desactivar'}</button></div>`).join('')}`;
  $('#so').onclick=()=>signOut(auth);
- $('#ev').onclick=()=>evDlg(sh);
+ let src='';
+ $('#mif').onchange=()=>{const fl=$('#mif').files[0];if(!fl)return;const r=new FileReader();r.onload=()=>{const i=new Image();i.onload=()=>{const s=Math.min(1,400/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=Math.round(i.width*s);c.height=Math.round(i.height*s);c.getContext('2d').drawImage(i,0,0,c.width,c.height);src=c.toDataURL('image/png');$('#mie').textContent='Imagen lista. Toca Guardar ícono.'};i.onerror=()=>{$('#mie').textContent='No se pudo leer esa imagen.'};i.src=r.result};r.readAsDataURL(fl)};
+ $('#mig').onclick=async()=>{if(!src)return $('#mie').textContent='Primero elige una imagen.';const d=(await icoCanvas({logo:src,cb:$('#mic').value})).toDataURL('image/png');try{localStorage.micono=d;setIcon(d);$('#mip').src=d;$('#mie').textContent='Guardado. Quita el acceso directo anterior y agrégalo de nuevo para ver el ícono nuevo.'}catch(e){$('#mie').textContent='No se pudo guardar en este navegador.'}};
+ $('#mir').onclick=()=>{try{localStorage.removeItem('micono')}catch(e){}setIcon('icono.png');$('#mip').src='icono.png';$('#mie').textContent='Ícono original restaurado.'};
+ $('#ev').onclick=()=>evDlg(sh);$('#ec').onclick=()=>evCli(sh);
  $('#nb').onclick=async()=>{const nombre=$('#nn').value.trim(),id=$('#ns').value.trim().toLowerCase(),er=$('#er');
   if(!nombre||!/^[a-z0-9-]{3,30}$/.test(id))return er.textContent='Escribe un nombre y un enlace de 3 a 30 letras minúsculas, números o guiones.';
   try{if((await getDoc(doc(db,'shops',id))).exists())return er.textContent='Ese enlace ya existe.';await setDoc(doc(db,'shops',id),{nombre,activo:true});panel()}catch(e){er.textContent='No se pudo crear: '+e.code}};
@@ -279,6 +298,13 @@ async function evDlg(sh){
    return`<div class="row"><span>${esc(a.nombre||'')} · ${esc(a.rol)}<br><span class="m">${esc(a.e)}</span></span><span style="text-align:right">${est}<br><span class="m">${u?'v'+u.version+(u.fecha&&u.fecha.toDate?' · '+u.fecha.toDate().toLocaleString('es-MX'):''):''}</span></span></div>`}).join('')||'<p class="m">Sin administradores.</p>')}
  m.innerHTML=h+'<button id="dv">Descargar evidencia (con textos)</button><button class="s" id="cl">Cerrar</button>';m.querySelector('#cl').onclick=m.close;
  m.querySelector('#dv').onclick=()=>{const b=new Blob([JSON.stringify(ALL,null,1)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='evidencia-terminos.json';a.click()}}
+async function evCli(sh){
+ const m=modal(`<b>Aceptación de avisos de clientes</b><p class="m">Versión vigente: ${AV.v}. Toca una barbería para ver su lista.</p>${sh.map(s=>`<button class="s" data-s="${esc(s.id)}">${esc(s.nombre||s.id)}</button>`).join('')}<div id="lc"></div><button class="s" id="cl">Cerrar</button>`);
+ m.querySelector('#cl').onclick=m.close;
+ m.querySelectorAll('[data-s]').forEach(x=>x.onclick=async()=>{const c=m.querySelector('#lc');c.innerHTML='<p class="m">Cargando…</p>';let L=[];
+  try{L=(await getDocs(query(collection(db,'shops',x.dataset.s,'clientes'),orderBy('alta','desc'),limit(100)))).docs.map(d=>d.data())}catch(e){return c.innerHTML='<p class="m">No se pudo leer: '+e.code+'</p>'}
+  const ok=L.filter(a=>a.av).length;
+  c.innerHTML=`<p><b>${esc(x.textContent)}</b></p><p class="m">${L.length} clientes (los últimos 100) · aceptados ${ok} · pendientes ${L.length-ok}</p>`+L.map(a=>`<div class="row"><span>${esc(a.nombre)}<br><span class="m">***${esc(String(a.tel||'').slice(-4))} · ${a.origen=='barbero'?'Registró '+esc(a.por||'')+' ('+esc(a.rolPor||'')+')':a.origen=='cliente'?'Se registró solo (QR)':'Sin registro'}</span></span><span style="text-align:right">${a.av?'Aceptado':'Pendiente'}<br><span class="m">${a.av?'v'+a.av+(a.avf&&a.avf.toDate?' · '+a.avf.toDate().toLocaleDateString('es-MX'):''):''}</span></span></div>`).join('')})}
 function sinAcc(m){V.innerHTML=`<div class="card"><h2>Sin acceso</h2><p>${m}</p><button class="s" id="so">Salir</button></div>`;$('#so').onclick=()=>signOut(auth)}
 function verif(u){V.innerHTML=`<div class="card"><h2>Confirma tu correo</h2><p>Necesitamos confirmar que ${esc(u.email)} es tuyo.</p><button id="en">Enviar correo de confirmación</button><button class="s" id="ya">Ya lo confirmé</button><p id="er" class="m" role="alert"></p></div>`;
  $('#en').onclick=async()=>{try{await sendEmailVerification(u);$('#er').textContent='Enviado. Revisa tu correo y la carpeta de spam.'}catch(e){$('#er').textContent='No se pudo enviar: '+e.code}};
@@ -290,7 +316,7 @@ async function entrar(u){
   if(!okT)return termsScreen(u,()=>entrar(u));if(!u.emailVerified)return verif(u)}
  B?admin():panel()}
 onAuthStateChanged(auth,async u=>{
- if(P.has('master')){if(!u){SH={nombre:'Acceso master'};return login()}return u.email===ADMIN?entrar(u):sinAcc('Esta cuenta no es de master.')}
+ if(P.has('master')){masterIco();if(!u){SH={nombre:'Acceso master'};return login()}return u.email===ADMIN?entrar(u):sinAcc('Esta cuenta no es de master.')}
  if(!B)return V.innerHTML='<div class="card"><h2>Abre el enlace de tu barbería</h2><p class="m">Pídelo a tu barbero o escanea su QR.</p></div>';
  try{const s=await getDoc(doc(db,'shops',B));if(!s.exists()||s.data().activo===false)throw 0;SH=s.data()}catch(e){return V.innerHTML='<div class="card"><h2>Barbería no disponible</h2></div>'}
  if(P.get('c')){document.title='Mi tarjeta · '+(SH.nombre||'');if(!cvOn){cvOn=1;clientView(P.get('c'))}return}
