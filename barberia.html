@@ -223,7 +223,7 @@ function cfgTab(){
  <label for="co">Nombre corto del ícono (máx. 12 letras)</label><input id="co" maxlength="12" value="${esc(cf.corto||'')}">${cl('cb','Color de fondo del ícono',cf.cb,'#FFFFFF')}
  <label><input type="checkbox" id="ia" style="width:auto;margin-right:8px" ${cf.icoArchivo?'checked':''}>Usar ícono desde archivo (solo si el automático falla)</label><button class="s" id="ib">Descargar ícono 180×180</button>
  <label for="ct">Contacto de privacidad (WhatsApp, correo o teléfono; se muestra en el aviso)</label><input id="ct" maxlength="80" value="${esc(cf.contacto||'')}">
- <button class="s" id="rb">Descargar respaldo (incluye nombres y teléfonos, cuídalo)</button>
+ <button class="s" id="rb">Descargar respaldo en Excel (incluye nombres y teléfonos, cuídalo)</button><button class="s" id="rj">Respaldo técnico (JSON, solo para programadores)</button>
  <label for="wa">WhatsApp (lada + número, solo dígitos)</label><input id="wa" inputmode="tel" value="${esc(cf.wa)}"><label for="wm">Mensaje de WhatsApp</label><input id="wm" maxlength="100" value="${esc(cf.waMsg)}">
  <label for="ig">Instagram (usuario sin @)</label><input id="ig" value="${esc(cf.ig)}"><label for="fb">Facebook (enlace)</label><input id="fb" value="${esc(cf.fb)}">
  <button id="sv2">Guardar cambios</button><p id="er" class="m" role="alert"></p></div>`;
@@ -235,7 +235,7 @@ function cfgTab(){
  $('#rs').onclick=()=>{cc.c1=cc.c2=cc.fondo='';$('#c1').value='#C8102E';$('#c2').value='#1F4E8C';$('#fo').value='#F3F5F8';pv()};
  $('#lgx').onclick=()=>{lg='';$('#lgf').value='';pv()};
  $('#lgf').onchange=()=>{const fl=$('#lgf').files[0];if(!fl)return;const r=new FileReader();r.onload=()=>{const i=new Image();i.onload=()=>{let w=240;for(let n=0;n<4;n++){const s=Math.min(1,w/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=Math.round(i.width*s);c.height=Math.round(i.height*s);c.getContext('2d').drawImage(i,0,0,c.width,c.height);const d=c.toDataURL('image/png');if(d.length<120000||n==3){lg=d;break}w-=60}pv()};i.onerror=()=>{$('#er').textContent='No se pudo leer esa imagen.'};i.src=r.result};r.readAsDataURL(fl)};
- $('#rb').onclick=respaldo;
+ $('#rb').onclick=respaldoXlsx;$('#rj').onclick=respaldo;
  $('#ib').onclick=async()=>{const c=await icoCanvas(g());c.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=B+'.png';a.click()})};
  document.querySelectorAll('#b input,#b textarea,#b select').forEach(x=>{x.addEventListener('input',pv);x.addEventListener('change',pv)});pv();
  $('#sv2').onclick=async()=>{const n=g(),er=$('#er');
@@ -246,6 +246,16 @@ function cfgTab(){
   try{await setDoc(cfgRef,n,{merge:true});cf={...cf,...n};er.textContent='Guardado. Los clientes ya ven los cambios.'}catch(e){er.textContent='No se guardó: '+e.code}}}
 
 const bk=()=>{let d=0;try{d=+localStorage['resp_'+B]||0}catch(e){}const n=d?Math.floor((Date.now()-d)/864e5):null;return n===null||n>=7?`<p class="m" style="color:var(--r)">${n===null?'Aún no has descargado un respaldo.':'Hace '+n+' días que no descargas un respaldo.'} Hazlo en Tarjeta → Descargar respaldo.</p>`:''};
+function loadXlsx(){return new Promise((ok,no)=>{if(window.XLSX)return ok();const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=ok;s.onerror=()=>no(new Error('No cargó la librería de Excel. Revisa tu conexión.'));document.head.append(s)})}
+async function respaldoXlsx(){
+ try{await loadXlsx();const g=n=>getDocs(collection(db,'shops',B,n)).then(s=>s.docs.map(d=>({id:d.id,...d.data()})));
+  const C=await g('clientes'),V=await g('ventas'),Z=await g('cierres'),fh=ms=>ms?new Date(ms).toLocaleString('es-MX'):'',ts=x=>x&&x.toDate?x.toDate().toLocaleString('es-MX'):'';
+  const cl=C.sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'')).map(c=>({'Nombre':c.nombre,'Teléfono':c.tel,'Visitas en el ciclo':c.n||0,'Última visita':fh(c.ult),'Fecha de alta':fh(c.alta),'Cómo se registró':c.origen=='barbero'?'Por un barbero':c.origen=='cliente'?'Por QR (él mismo)':'Sin dato','Registró':c.por||'','Nivel de quien registró':c.rolPor||'','Aviso de privacidad':c.av?'Aceptado':'Pendiente','Fecha del aviso':ts(c.avf),'Mayor de edad (declaró)':c.mayor?'Sí':''}));
+  const vt=V.sort((a,b)=>a.t-b.t).map(v=>({'Fecha':v.fecha,'Hora':new Date(v.t).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),'Cliente':v.nombre,'Servicio':v.serv,'Precio':v.precio,'Descuento %':Math.round((v.desc||0)*100),'Cobrado por el servicio':v.total,'Diseño':v.dis||0,'Total cobrado':v.total+(v.dis||0),'Barbero':v.barbero||'','Visita número':v.num}));
+  const ci=Z.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||'')).map(z=>({'Fecha':z.fecha,'Visitas':z.visitas,'Total':z.total,'Descuentos dados':z.descuentos,'Diseños (cantidad)':z.disenos?z.disenos.n:0,'Diseños (dinero)':z.disenos?z.disenos.total:0,'Cerró':z.por||'','Hora de cierre':fh(z.cerrado)}));
+  const wb=XLSX.utils.book_new();[['Clientes',cl],['Ventas',vt],['Cierres',ci]].forEach(([n,r])=>{const w=XLSX.utils.json_to_sheet(r.length?r:[{'Sin datos':''}]);w['!cols']=Object.keys(r[0]||{a:1}).map(k=>({wch:Math.max(14,k.length+2)}));XLSX.utils.book_append_sheet(wb,w,n)});
+  XLSX.writeFile(wb,'respaldo-'+B+'-'+new Date().toLocaleDateString('sv-SE')+'.xlsx');try{localStorage['resp_'+B]=Date.now()}catch(e){}
+ }catch(e){alert('No se pudo descargar el respaldo: '+(e.code||e.message))}}
 async function respaldo(){
  const cv=o=>Object.fromEntries(Object.entries(o).map(([k,v])=>[k,v&&v.toDate?v.toDate().toISOString():v])),g=n=>getDocs(collection(db,'shops',B,n)).then(s=>s.docs.map(d=>({id:d.id,...cv(d.data())})));
  try{const o={barberia:B,generado:new Date().toISOString(),clientes:await g('clientes'),ventas:await g('ventas'),cierres:await g('cierres')},a=document.createElement('a');
