@@ -24,7 +24,7 @@ nav button{margin:0;padding:10px 2px;font-size:15px;letter-spacing:.3px}nav butt
 .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font:700 24px 'Barlow Condensed',sans-serif}
 .hd button{width:auto;margin:0;padding:6px 14px;font-size:16px}
 nav{position:fixed;left:0;right:0;top:auto;bottom:0;margin:0;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--l);border-bottom:0;background:var(--c);gap:2px}
-nav button{display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent!important;color:var(--m)!important;border:0!important;padding:6px 2px;font-size:13px;letter-spacing:.3px}
+nav button{display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent!important;color:var(--m)!important;border:0!important;padding:6px 1px;font-size:12px;letter-spacing:0}
 nav button b{font-size:20px;line-height:1}nav button:not(.s){color:var(--r)!important}
 main{padding-bottom:100px}
 .svc{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
@@ -129,13 +129,13 @@ async function altaView(){
 function login(){
  V.innerHTML=`<div class="card"><div style="font-size:56px;line-height:1">💈</div><h2>${esc(SH.nombre||'Administrador')}</h2><p class="m">Acceso de administradores</p><input id="em" type="email" aria-label="Correo" placeholder="Correo"><input id="pw" type="password" aria-label="Contraseña" placeholder="Contraseña"><button id="go">Entrar</button><button class="s" id="fg">Olvidé mi contraseña</button><button class="s" id="cc">Crear cuenta (me invitaron)</button><p id="er" class="m" role="alert"></p></div>`;
  $('#cc').onclick=async()=>{const e=$('#em').value.trim(),p=$('#pw').value;if(!e||p.length<8)return $('#er').textContent='Escribe tu correo y una contraseña de 8 o más caracteres arriba.';try{await createUserWithEmailAndPassword(auth,e,p)}catch(x){$('#er').textContent=x.code=='auth/email-already-in-use'?'Ese correo ya tiene cuenta. Usa Entrar.':'No se pudo crear la cuenta.'}};$('#fg').onclick=async()=>{const e=$('#em').value.trim();if(!e)return $('#er').textContent='Escribe tu correo arriba.';try{await sendPasswordResetEmail(auth,e);$('#er').textContent='Te enviamos un correo para crear una contraseña nueva.'}catch(x){$('#er').textContent='No se pudo enviar el correo.'}};$('#go').onclick=()=>signInWithEmailAndPassword(auth,$('#em').value.trim(),$('#pw').value).catch(()=>$('#er').textContent='Correo o contraseña incorrectos.')}
-async function admin(){cf=await getCfg();CL=(await getDocs(collection(db,'shops',B,'clientes'))).docs.map(d=>({id:d.id,...d.data()}));tab('r')}
-const TB=[['r','✂️','Registrar'],['c','👥','Clientes'],['s','📊','Resumen'],['p','💲','Precios'],['d','🎨','Tarjeta']];
+async function admin(){PEND=await pend();cf=await getCfg();CL=(await getDocs(collection(db,'shops',B,'clientes'))).docs.map(d=>({id:d.id,...d.data()}));tab('r')}
+const TB=[['r','✂️','Registrar'],['c','👥','Clientes'],['s','📊','Resumen'],['p','💲','Precios'],['d','🎨','Tarjeta'],['e','🤝','Equipo']];
 const ofl=()=>{const e=$('#of');if(e)e.style.display=navigator.onLine?'none':'block'};addEventListener('online',ofl);addEventListener('offline',ofl);
 function tab(t){
- V.innerHTML=`<header class="hd"><span>💈 ${esc(SH.nombre||'Panel')} ${NOM=='Master'?'<a class="m" href="?master" style="font-size:14px">← Panel</a>':''}</span><button class="s" id="so">Salir</button></header><div id="of" class="m" style="display:none;color:var(--r)" role="alert">Sin conexión: no registres visitas hasta que regrese.</div><nav>${TB.filter(x=>ROL=='dueno'||'rcs'.includes(x[0])).map(([k,i,n])=>`<button class="${k==t?'':'s'}" data-t="${k}"><b>${i}</b>${n}</button>`).join('')}</nav>${ROL=='dueno'?bk():''}<div id="b"></div>`;
+ V.innerHTML=`<header class="hd"><span>💈 ${esc(SH.nombre||'Panel')} ${NOM=='Master'?'<a class="m" href="?master" style="font-size:14px">← Panel</a>':''}</span><button class="s" id="so">Salir</button></header><div id="of" class="m" style="display:none;color:var(--r)" role="alert">Sin conexión: no registres visitas hasta que regrese.</div><nav>${TB.filter(x=>ROL=='dueno'||'rcs'.includes(x[0])).map(([k,i,n])=>`<button class="${k==t?'':'s'}" data-t="${k}"><b>${i}</b>${n}</button>`).join('')}</nav>${ROL=='dueno'?bk()+pb():''}<div id="b"></div>`;
  document.querySelectorAll('[data-t]').forEach(x=>x.onclick=()=>tab(x.dataset.t));$('#so').onclick=()=>signOut(auth);
- ({r:regTab,c:cliTab,s:resTab,p:prTab,d:cfgTab})[t]();ofl()}
+ ({r:regTab,c:cliTab,s:resTab,p:prTab,d:cfgTab,e:eqTab})[t]();ofl()}
 function regTab(){
  $('#b').innerHTML=`<button id="sc">Escanear QR</button><input id="q" placeholder="Buscar por nombre o teléfono" aria-label="Buscar cliente"><div id="ls"></div><button class="s" id="nw">Nuevo cliente</button><div id="pn"></div>`;
  $('#q').oninput=()=>{const q=$('#q').value.toLowerCase().trim();$('#ls').innerHTML=q.length<2?'':CL.filter(c=>((c.nombre||'')+(c.tel||'')).toLowerCase().includes(q)).slice(0,8).map(c=>`<div class="row" data-id="${c.id}" tabindex="0"><span>${esc(c.nombre)}</span><span class="m">${c.n||0}/10</span></div>`).join('');document.querySelectorAll('.row[data-id]').forEach(r=>r.onclick=()=>pick(r.dataset.id))};
@@ -201,8 +201,11 @@ async function resTab(sel){
  <div class="tiles">${keys.map(k=>`<div class="tile"><span class="m">${esc(k)}</span><b>${(S[k]||{n:0}).n}</b><span class="m">$${(S[k]||{m:0}).m}</span></div>`).join('')}<div class="tile"><span class="m">Diseños</span><b>${dn.length}</b><span class="m">$${dt}</span></div></div>
  ${dueno&&!sel.b?`<div class="card"><b>Por barbero</b>${Object.entries(PB).map(([k,v])=>`<div class="row"><span>${esc(k)}</span><span>${v.n} · $${v.m}</span></div>`).join('')||'<p class="m">Sin visitas.</p>'}</div>`:''}
  <div class="card"><b>Detalle</b>${vs.slice(0,200).map(v=>`<div class="row"><span>${rg?'':v.fecha+' '}${new Date(v.t).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})} ${esc(v.nombre)}<br><span class="m">${esc(v.serv)}${v.desc?' · '+v.desc*100+'%':''}${v.dis?' · diseño $'+v.dis:''}${v.barbero?' · '+esc(v.barbero):''}</span></span><b>$${v.total+(v.dis||0)}</b></div>`).join('')||'<p class="m">Sin visitas en este periodo.</p>'}</div>
- ${dueno&&sel.p=='d'&&!sel.b?(cie?`<p class="m">Turno cerrado con $${cie.total}.</p><button class="s" id="ro">Reabrir día</button>`:'<button id="cr">Cerrar turno</button>'):''}<p id="er" class="m" role="alert"></p>`;
+ ${dueno&&sel.p=='d'&&!sel.b?(cie?`<p class="m">Turno cerrado con $${cie.total}.</p><button class="s" id="ro">Reabrir día</button>`:'<button id="cr">Cerrar turno</button>'):''}<div class="card"><b>Descargar reporte</b><p class="m">Usa el periodo, la fecha y el barbero que tienes elegidos arriba.</p><label for="rf">Formato</label><select id="rf"><option value="p">PDF</option><option value="x">Excel</option></select><label style="display:block;margin:8px 0"><input type="checkbox" id="rn" style="width:auto;margin-right:8px">Incluir nombres de clientes</label><button id="rd">Descargar reporte</button></div><p id="er" class="m" role="alert"></p>`;
  $('#pp').onchange=$('#pf').onchange=()=>go(true);if($('#pb'))$('#pb').onchange=()=>go(false);
+ $('#rd').onclick=async()=>{const nom=$('#rn').checked,xl=$('#rf').value=='x',tit=(SH.nombre||B)+' · '+(rg?d1:d1+' a '+d2)+(sel.b?' · '+sel.b:(dueno?'':' · '+NOM)),
+  det=vs.map(v=>({f:v.fecha,h:hora(v.t),c:v.nombre,s:v.serv,d:Math.round((v.desc||0)*100),dis:v.dis||0,t:v.total+(v.dis||0),b:v.barbero||''})),T={tot,dsc,dt,dn:dn.length,n:vs.length},fn='reporte-'+B+'-'+d1+(rg?'':'-a-'+d2)+(xl?'.xlsx':'.pdf'),pbx=dueno&&!sel.b?PB:null;
+  try{xl?await repXlsx(tit,keys,S,pbx,det,T,nom,fn):await repPdf(tit,keys,S,pbx,det,T,nom,fn)}catch(e){alert('No se pudo crear el reporte: '+(e.code||e.message))}};
  if($('#cr'))$('#cr').onclick=async()=>{if(!confirm('¿Cerrar el turno del '+d1+' con $'+tot+'? Después no se podrán registrar ni deshacer visitas de ese día.'))return;try{await setDoc(doc(db,'shops',B,'cierres',d1),{fecha:d1,visitas:vs.length,total:tot,descuentos:dsc,porServicio:S,porBarbero:PB,disenos:{n:dn.length,total:dt},cerrado:Date.now(),por:NOM});resTab(sel)}catch(e){$('#er').textContent='No se guardó: '+e.code}};
  if($('#ro'))$('#ro').onclick=async()=>{if(!confirm('¿Reabrir el día '+d1+'?'))return;try{await deleteDoc(doc(db,'shops',B,'cierres',d1));resTab(sel)}catch(e){$('#er').textContent='No se pudo reabrir: '+e.code}}}
 function prTab(){
@@ -246,6 +249,35 @@ function cfgTab(){
   try{await setDoc(cfgRef,n,{merge:true});cf={...cf,...n};er.textContent='Guardado. Los clientes ya ven los cambios.'}catch(e){er.textContent='No se guardó: '+e.code}}}
 
 const bk=()=>{let d=0;try{d=+localStorage['resp_'+B]||0}catch(e){}const n=d?Math.floor((Date.now()-d)/864e5):null;return n===null||n>=7?`<p class="m" style="color:var(--r)">${n===null?'Aún no has descargado un respaldo.':'Hace '+n+' días que no descargas un respaldo.'} Hazlo en Tarjeta → Descargar respaldo.</p>`:''};
+let PEND='';const hora=x=>new Date(x).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),pb=()=>PEND?`<p class="m" style="color:var(--r)">El día ${PEND} quedó sin cerrar. Ve a Resumen, elige esa fecha y toca Cerrar turno.</p>`:'';
+async function pend(){if(ROL!='dueno')return'';const y=new Date(Date.now()-864e5).toLocaleDateString('sv-SE');try{const v=await getDocs(query(collection(db,'shops',B,'ventas'),where('fecha','==',y),limit(1)));if(v.empty)return'';const c=await getDoc(doc(db,'shops',B,'cierres',y));return c.exists()?'':y}catch(e){return''}}
+function loadPdf(){return new Promise((ok,no)=>{if(window.jspdf)return ok();const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';s.onload=ok;s.onerror=()=>no(new Error('No cargó la librería de PDF. Revisa tu conexión.'));document.head.append(s)})}
+async function repPdf(tit,keys,S,PB,det,T,nom,fn){
+ await loadPdf();const D=new window.jspdf.jsPDF({unit:'mm',format:'letter'}),c=s=>String(s==null?'':s).replace(/[^\u0000-\u00FF]/g,'');let y=18;
+ const row=(cols,xs,b,sz)=>{if(y>262){D.addPage();y=18}D.setFont('helvetica',b?'bold':'normal');D.setFontSize(sz||10);cols.forEach((v,i)=>D.text(c(v),xs[i],y,{maxWidth:(xs[i+1]||203)-xs[i]-2}));y+=(sz||10)>12?8:5.5};
+ row([tit],[15],1,15);row(['Generado: '+new Date().toLocaleString('es-MX')],[15],0,9);y+=3;
+ row(['Total cobrado: $'+T.tot],[15],1,13);row(['Visitas: '+T.n+'    Descuentos dados: $'+T.dsc+'    Diseños: '+T.dn+' ($'+T.dt+')'],[15],0);y+=3;
+ row(['Por servicio','Cantidad','Dinero'],[15,110,140],1);keys.forEach(k=>row([k,(S[k]||{n:0}).n,'$'+(S[k]||{m:0}).m],[15,110,140]));
+ if(PB){y+=3;row(['Por barbero','Visitas','Dinero'],[15,110,140],1);Object.entries(PB).forEach(([k,v])=>row([k,v.n,'$'+v.m],[15,110,140]))}
+ y+=4;row(['Detalle'],[15],1,12);const xs=nom?[15,34,48,88,124,138,156,176]:[15,34,48,100,116,134,152];
+ row(nom?['Fecha','Hora','Cliente','Servicio','Dto','Diseño','Total','Barbero']:['Fecha','Hora','Servicio','Dto','Diseño','Total','Barbero'],xs,1);
+ det.forEach(x=>row(nom?[x.f,x.h,x.c,x.s,x.d+'%','$'+x.dis,'$'+x.t,x.b]:[x.f,x.h,x.s,x.d+'%','$'+x.dis,'$'+x.t,x.b],xs));
+ if(!det.length)row(['Sin visitas en este periodo.'],[15]);D.save(fn)}
+async function repXlsx(tit,keys,S,PB,det,T,nom,fn){
+ await loadXlsx();const r=[['Reporte',tit],['Total cobrado',T.tot],['Visitas',T.n],['Descuentos dados',T.dsc],['Diseños (cantidad)',T.dn],['Diseños (dinero)',T.dt],[],['Servicio','Cantidad','Dinero']];
+ keys.forEach(k=>r.push([k,(S[k]||{n:0}).n,(S[k]||{m:0}).m]));if(PB){r.push([],['Barbero','Visitas','Dinero']);Object.entries(PB).forEach(([k,v])=>r.push([k,v.n,v.m]))}
+ const d=det.map(x=>({Fecha:x.f,Hora:x.h,...(nom?{Cliente:x.c}:{}),Servicio:x.s,'Descuento %':x.d,Diseño:x.dis,'Total cobrado':x.t,Barbero:x.b})),wb=XLSX.utils.book_new(),w1=XLSX.utils.aoa_to_sheet(r),w2=XLSX.utils.json_to_sheet(d.length?d:[{'Sin visitas':''}]);
+ w1['!cols']=[{wch:30},{wch:16},{wch:14}];XLSX.utils.book_append_sheet(wb,w1,'Resumen');XLSX.utils.book_append_sheet(wb,w2,'Detalle');XLSX.writeFile(wb,fn)}
+async function eqTab(){
+ $('#b').innerHTML='<p class="m">Cargando…</p>';let L=[];
+ try{L=(await getDocs(collection(db,'shops',B,'admins'))).docs.map(d=>({e:d.id,...d.data()}))}catch(e){return $('#b').innerHTML='<div class="card">No se pudo leer el equipo: '+e.code+'</div>'}
+ const url=URLB+'?b='+B;
+ $('#b').innerHTML=`<div class="card"><b>Equipo de ${esc(SH.nombre||B)}</b>${L.map(a=>`<div class="row"><span>${esc(a.nombre||'')}<br><span class="m">${esc(a.e)} · ${a.rol=='dueno'?'Dueño':'Barbero'}</span></span>${a.rol=='barbero'||NOM=='Master'?`<button class="s" style="width:auto;padding:6px 12px" data-q="${esc(a.e)}">Quitar</button>`:''}</div>`).join('')||'<p class="m">Aún no hay equipo.</p>'}</div>
+ <div class="card"><b>Invitar a un barbero</b><input id="ie" type="email" placeholder="Correo del barbero" aria-label="Correo"><input id="in" placeholder="Nombre" maxlength="30" aria-label="Nombre"><button id="iv">Invitar</button><p id="er" class="m" role="alert"></p><p class="m">Después de invitarlo, mándale este enlace. Debe tocar <b>Crear cuenta</b>:</p><p class="m" style="word-break:break-all">${esc(url)}</p><button class="s" id="cp">Copiar enlace</button></div>`;
+ document.querySelectorAll('[data-q]').forEach(x=>x.onclick=async()=>{if(!confirm('¿Quitar a '+x.dataset.q+'? Sus ventas pasadas se conservan.'))return;try{await deleteDoc(doc(db,'shops',B,'admins',x.dataset.q))}catch(e){alert('No se pudo quitar: '+e.code)}eqTab()});
+ $('#cp').onclick=()=>navigator.clipboard.writeText(url).then(()=>alert('Enlace copiado'));
+ $('#iv').onclick=async()=>{const e=$('#ie').value.trim().toLowerCase(),n=$('#in').value.trim();if(!/^\S+@\S+\.\S+$/.test(e)||!n)return $('#er').textContent='Escribe un correo válido y un nombre.';
+  try{await setDoc(doc(db,'shops',B,'admins',e),{nombre:n,rol:'barbero',invitado:Date.now()});eqTab()}catch(x){$('#er').textContent='No se pudo invitar: '+x.code}}}
 function loadXlsx(){return new Promise((ok,no)=>{if(window.XLSX)return ok();const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=ok;s.onerror=()=>no(new Error('No cargó la librería de Excel. Revisa tu conexión.'));document.head.append(s)})}
 async function respaldoXlsx(){
  try{await loadXlsx();const g=n=>getDocs(collection(db,'shops',B,n)).then(s=>s.docs.map(d=>({id:d.id,...d.data()})));
@@ -320,7 +352,8 @@ async function evDlg(sh){
   C.forEach(c=>ALL.push({barberia:s.id,...c,fecha:c.fecha&&c.fecha.toDate?c.fecha.toDate().toISOString():null}));
   h+=`<p><b>${esc(s.nombre||s.id)}</b></p>`+(A.map(a=>{const u=C.filter(c=>c.email==a.e).sort((x,y)=>y.version-x.version||((y.fecha&&y.fecha.seconds)||0)-((x.fecha&&x.fecha.seconds)||0))[0],est=!u?'Pendiente':u.version==TERM.v?'Al día':'Desactualizado';
    return`<div class="row"><span>${esc(a.nombre||'')} · ${esc(a.rol)}<br><span class="m">${esc(a.e)}</span></span><span style="text-align:right">${est}<br><span class="m">${u?'v'+u.version+(u.fecha&&u.fecha.toDate?' · '+u.fecha.toDate().toLocaleString('es-MX'):''):''}</span></span></div>`}).join('')||'<p class="m">Sin administradores.</p>')}
- m.innerHTML=h+'<button id="dv">Descargar evidencia (con textos)</button><button class="s" id="cl">Cerrar</button>';m.querySelector('#cl').onclick=m.close;
+ m.innerHTML=h+'<button id="dx">Descargar evidencia en Excel</button><button class="s" id="dv">Evidencia técnica (JSON)</button><button class="s" id="cl">Cerrar</button>';m.querySelector('#cl').onclick=m.close;
+ m.querySelector('#dx').onclick=async()=>{try{await loadXlsx();const w=XLSX.utils.json_to_sheet(ALL.length?ALL.map(a=>({'Barbería':a.barberia,'Nombre':a.nombre,'Correo':a.email,'Nivel':a.rol,'Versión':a.version,'Fecha y hora':a.fecha?new Date(a.fecha).toLocaleString('es-MX'):'','Correo confirmado al aceptar':a.verificado?'Sí':'No','Texto aceptado':a.texto})):[{'Sin registros':''}]),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,w,'Términos');XLSX.writeFile(wb,'evidencia-terminos.xlsx')}catch(e){alert('No se pudo crear el Excel: '+e.message)}};
  m.querySelector('#dv').onclick=()=>{const b=new Blob([JSON.stringify(ALL,null,1)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='evidencia-terminos.json';a.click()}}
 async function evCli(sh){
  const m=modal(`<b>Aceptación de avisos de clientes</b><p class="m">Versión vigente: ${AV.v}. Toca una barbería para ver su lista.</p>${sh.map(s=>`<button class="s" data-s="${esc(s.id)}">${esc(s.nombre||s.id)}</button>`).join('')}<div id="lc"></div><button class="s" id="cl">Cerrar</button>`);
