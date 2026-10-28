@@ -368,8 +368,8 @@ function verif(u){V.innerHTML=`<div class="card"><h2>Confirma tu correo</h2><p>N
  $('#ya').onclick=async()=>{await u.reload();await u.getIdToken(true);u.emailVerified?entrar(auth.currentUser):$('#er').textContent='Aún no aparece confirmado.'}}
 async function entrar(u){
  BEM=u.email.toLowerCase();
- if(u.email===ADMIN){if(!u.emailVerified)return verif(u);ROL='dueno';NOM='Master'}else{let d;try{d=await getDoc(doc(db,'shops',B,'admins',u.email.toLowerCase()))}catch(e){}
-  if(!d||!d.exists())return sinAcc('Tu correo no tiene acceso a esta barbería.');ROL=d.data().rol;NOM=d.data().nombre||u.email;let okT=false;try{okT=!(await getDocs(query(collection(db,'shops',B,'aceptaciones'),where('email','==',BEM),where('version','==',TERM.v),limit(1)))).empty}catch(e){}
+ if(u.email===ADMIN){if(!u.emailVerified)return verif(u);ROL='dueno';NOM='Master'}else{let d,er='';try{d=await getDoc(doc(db,'shops',B,'admins',u.email.toLowerCase()))}catch(e){er=e.code||e.message}
+  if(!d||!d.exists())return sinAcc('Tu correo no tiene acceso a esta barbería.<br><span class="m">Correo con el que entraste: '+esc(u.email)+'<br>Documento buscado: shops/'+esc(B)+'/admins/'+esc(u.email.toLowerCase())+'<br>'+(er?'Error de Firebase: '+esc(er):'El documento no existe.')+'</span>');ROL=d.data().rol;NOM=d.data().nombre||u.email;let okT=false;try{okT=!(await getDocs(query(collection(db,'shops',B,'aceptaciones'),where('email','==',BEM),where('version','==',TERM.v),limit(1)))).empty}catch(e){}
   if(!okT)return termsScreen(u,()=>entrar(u));if(!u.emailVerified)return verif(u)}
  B?admin():panel()}
 onAuthStateChanged(auth,async u=>{
