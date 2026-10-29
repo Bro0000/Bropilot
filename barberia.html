@@ -34,7 +34,11 @@ main{padding-bottom:100px}
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
 .tile{background:var(--c);border:1px solid var(--l);border-radius:12px;padding:10px 12px}.tile b{display:block;font:700 32px/1 'Barlow Condensed',sans-serif}
 .hero{background:var(--t);color:var(--bg);border:0}.hero .m{color:var(--bg);opacity:.8}
-.lg{position:absolute;top:12px;left:14px;width:56px;height:56px;object-fit:contain}</style>
+.lg{position:absolute;top:12px;left:14px;width:56px;height:56px;object-fit:contain}nav{left:12px!important;right:12px!important;bottom:calc(20px + env(safe-area-inset-bottom,0px))!important;padding:6px!important;border:1px solid var(--l)!important;border-radius:26px;box-shadow:0 8px 28px rgba(0,0,0,.18);gap:0!important;overflow:hidden}
+nav button{flex:1;position:relative;z-index:1;border-radius:20px!important}
+.pill{position:absolute;left:6px;top:6px;bottom:6px;border-radius:20px;background:rgba(200,16,46,.14);transition:transform .28s cubic-bezier(.3,.9,.3,1);z-index:0}
+main{padding-bottom:140px!important}
+</style>
 <script>function L(u,f){var s=document.createElement('script');s.src=u;s.onerror=f;document.head.appendChild(s)}
 L('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js',function(){L('https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js')});
 L('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js')</script><script>window.__e=[];addEventListener('error',function(e){__e.push(e.message||'error al cargar un archivo')});addEventListener('unhandledrejection',function(e){var r=e.reason;__e.push('Promesa: '+(r&&(r.code||r.message)||r))});
@@ -130,10 +134,12 @@ function login(){
  V.innerHTML=`<div class="card"><div style="font-size:56px;line-height:1">💈</div><h2>${esc(SH.nombre||'Administrador')}</h2><p class="m">Acceso de administradores</p><input id="em" type="email" aria-label="Correo" placeholder="Correo"><input id="pw" type="password" aria-label="Contraseña" placeholder="Contraseña"><button id="go">Entrar</button><button class="s" id="fg">Olvidé mi contraseña</button><button class="s" id="cc">Crear cuenta (me invitaron)</button><p id="er" class="m" role="alert"></p></div>`;
  $('#cc').onclick=async()=>{const e=$('#em').value.trim(),p=$('#pw').value;if(!e||p.length<8)return $('#er').textContent='Escribe tu correo y una contraseña de 8 o más caracteres arriba.';try{await createUserWithEmailAndPassword(auth,e,p)}catch(x){$('#er').textContent=x.code=='auth/email-already-in-use'?'Ese correo ya tiene cuenta. Usa Entrar.':'No se pudo crear la cuenta.'}};$('#fg').onclick=async()=>{const e=$('#em').value.trim();if(!e)return $('#er').textContent='Escribe tu correo arriba.';try{await sendPasswordResetEmail(auth,e);$('#er').textContent='Te enviamos un correo para crear una contraseña nueva.'}catch(x){$('#er').textContent='No se pudo enviar el correo.'}};$('#go').onclick=()=>signInWithEmailAndPassword(auth,$('#em').value.trim(),$('#pw').value).catch(()=>$('#er').textContent='Correo o contraseña incorrectos.')}
 async function admin(){PEND=await pend();cf=await getCfg();CL=(await getDocs(collection(db,'shops',B,'clientes'))).docs.map(d=>({id:d.id,...d.data()}));tab('r')}
-const TB=[['r','✂️','Registrar'],['c','👥','Clientes'],['s','📊','Resumen'],['p','💲','Precios'],['d','🎨','Tarjeta'],['e','🤝','Equipo']];
+const TB=[['r','📷','Registrar'],['c','👥','Clientes'],['s','📊','Resumen'],['p','💲','Precios'],['d','🎨','Tarjeta'],['e','🤝','Equipo']];
 const ofl=()=>{const e=$('#of');if(e)e.style.display=navigator.onLine?'none':'block'};addEventListener('online',ofl);addEventListener('offline',ofl);
+const TBV=r=>TB.filter(x=>r=='dueno'||'rcs'.includes(x[0]));let PREV=0;
 function tab(t){
- V.innerHTML=`<header class="hd"><span>💈 ${esc(SH.nombre||'Panel')} ${NOM=='Master'?'<a class="m" href="?master" style="font-size:14px">← Panel</a>':''}</span><button class="s" id="so">Salir</button></header><div id="of" class="m" style="display:none;color:var(--r)" role="alert">Sin conexión: no registres visitas hasta que regrese.</div><nav>${TB.filter(x=>ROL=='dueno'||'rcs'.includes(x[0])).map(([k,i,n])=>`<button class="${k==t?'':'s'}" data-t="${k}"><b>${i}</b>${n}</button>`).join('')}</nav>${ROL=='dueno'?bk()+pb():''}<div id="b"></div>`;
+ V.innerHTML=`<header class="hd"><span>💈 ${esc(SH.nombre||'Panel')} ${NOM=='Master'?'<a class="m" href="?master" style="font-size:14px">← Panel</a>':''}</span><button class="s" id="so">Salir</button></header><div id="of" class="m" style="display:none;color:var(--r)" role="alert">Sin conexión: no registres visitas hasta que regrese.</div><nav><i class="pill" style="width:calc((100% - 12px)/${TBV(ROL).length})"></i>${TBV(ROL).map(([k,i,n])=>`<button class="${k==t?'':'s'}" data-t="${k}"><b>${i}</b>${n}</button>`).join('')}</nav>${ROL=='dueno'?bk()+pb():''}<div id="b"></div>`;
+ {const L=TBV(ROL),i=Math.max(0,L.findIndex(x=>x[0]==t)),p=document.querySelector('.pill');if(p){p.style.transform='translateX('+(Math.min(PREV,L.length-1)*100)+'%)';requestAnimationFrame(()=>requestAnimationFrame(()=>{p.style.transform='translateX('+(i*100)+'%)'}))}PREV=i}
  document.querySelectorAll('[data-t]').forEach(x=>x.onclick=()=>tab(x.dataset.t));$('#so').onclick=()=>signOut(auth);
  ({r:regTab,c:cliTab,s:resTab,p:prTab,d:cfgTab,e:eqTab})[t]();ofl()}
 function regTab(){
