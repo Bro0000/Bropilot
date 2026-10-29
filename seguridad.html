@@ -1,0 +1,111 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pruebas de seguridad</title>
+<style>body{font:16px/1.4 -apple-system,Arial,sans-serif;max-width:640px;margin:auto;padding:16px;background:#f3f5f8;color:#12202f}input,button{width:100%;padding:12px;margin:4px 0 10px;font:inherit;border-radius:10px;border:1px solid #ccd;box-sizing:border-box}button{background:#c8102e;color:#fff;border:0;font-weight:700}li{margin:5px 0;list-style:none}ul{padding:0}.ok{color:#127a3a}.ko{color:#b00020;font-weight:700}h3{margin:16px 0 4px}</style></head><body>
+<h1>Pruebas de seguridad</h1><p>Usa cuentas de prueba. Las contraseñas no se guardan en ningún lado.</p>
+<label>Barbería a probar (enlace)</label><input id="b1" value="el-wero">
+<label>Otra barbería de prueba (enlace)</label><input id="b2" value="seguridad-prueba">
+<label>Correo del dueño de la primera</label><input id="de" type="email" autocomplete="off"><label>Contraseña del dueño</label><input id="dp" type="password" autocomplete="off">
+<label>Correo del barbero de la primera</label><input id="be" type="email" autocomplete="off"><label>Contraseña del barbero</label><input id="bp" type="password" autocomplete="off">
+<button id="go">Ejecutar pruebas</button><div id="out"></div>
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import{getAuth,signInWithEmailAndPassword,signOut}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import{getFirestore,doc,getDoc,setDoc,getDocs,collection,query,where,limit,updateDoc,deleteDoc,deleteField,serverTimestamp}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+const app=initializeApp({
+apiKey:"AIzaSyAJ382B7G2sZjhXg2OB1fzJVioQn7sMGbk",
+authDomain:"adminbr0.firebaseapp.com",
+projectId:"adminbr0",
+storageBucket:"adminbr0.firebasestorage.app",
+messagingSenderId:"206654267138",
+appId:"1:206654267138:web:bfe2c122dab56e004c2c1b"}),auth=getAuth(app),db=getFirestore(app),$=s=>document.querySelector(s),out=$('#out');
+let pass=0,fail=0;
+const sec=t=>out.insertAdjacentHTML('beforeend','<h3>'+t+'</h3>');
+const line=(o,t)=>{o?pass++:fail++;out.insertAdjacentHTML('beforeend','<li class="'+(o?'ok':'ko')+'">'+(o?'✓ ':'✗ ')+String(t).replace(/</g,'&lt;')+'</li>')};
+const SI=async(l,f)=>{try{await f();line(true,l)}catch(e){line(false,l+' → falló: '+(e.code||e.message))}};
+const NO=async(l,f)=>{try{await f();line(false,l+' → SE PERMITIÓ y debía bloquearse')}catch(e){line(e.code=='permission-denied',l+(e.code=='permission-denied'?'':' → error distinto: '+(e.code||e.message)))}};
+const tk=()=>[...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,'0')).join('');
+$('#go').onclick=async()=>{
+ out.innerHTML='';pass=fail=0;
+ const A=$('#b1').value.trim(),B=$('#b2').value.trim(),dE=$('#de').value.trim().toLowerCase(),dP=$('#dp').value,bE=$('#be').value.trim().toLowerCase(),bP=$('#bp').value;
+ if(!A||!B||!dE||!dP||!bE||!bP){out.innerHTML='<p class="ko">Llena todos los campos.</p>';return}
+ $('#go').disabled=true;
+ const cA=(...p)=>collection(db,'shops',A,...p),dA=(...p)=>doc(db,'shops',A,...p),cB=(...p)=>collection(db,'shops',B,...p),dB=(...p)=>doc(db,'shops',B,...p);
+ const pub=()=>({nombre:'Prueba seguridad',tel:'5500000000',n:0,alta:Date.now(),origen:'cliente',av:1,avf:serverTimestamp(),mayor:true});
+ const stf=(em,rol)=>({nombre:'Prueba staff',tel:'5500000001',n:0,alta:Date.now(),origen:'barbero',por:'Prueba',porEmail:em,rolPor:rol,informado:true});
+ const venta=(em,f)=>({t:Date.now(),fecha:f,serv:'Corte',precio:1,desc:0,total:1,dis:0,num:1,barbero:'Prueba',bem:em,nombre:'Prueba',cid:'prueba'});
+ const T=[],V=tk();
+ try{
+  await signOut(auth);
+  sec('1. Sin iniciar sesión');
+  await SI('Leer los datos públicos de la barbería',()=>getDoc(doc(db,'shops',A)));
+  await SI('Leer la configuración pública (colores, logo, aviso)',()=>getDoc(dA('config','main')));
+  await NO('Listar clientes',()=>getDocs(cA('clientes')));
+  await NO('Listar ventas',()=>getDocs(cA('ventas')));
+  await NO('Listar cierres',()=>getDocs(cA('cierres')));
+  await NO('Listar administradores',()=>getDocs(cA('admins')));
+  await NO('Listar aceptaciones de términos',()=>getDocs(cA('aceptaciones')));
+  await NO('Listar todas las barberías',()=>getDocs(collection(db,'shops')));
+  await NO('Crear una aceptación de términos',()=>setDoc(dA('aceptaciones',tk()),{email:'x@x.com',nombre:'x',rol:'barbero',version:1,texto:'x',fecha:serverTimestamp(),verificado:false,ua:'x'}));
+  await NO('Hacerse pasar por un barbero al crear un cliente',()=>setDoc(dA('clientes',tk()),stf('falso@x.com','dueno')));
+  await NO('Crear un cliente con 5 sellos',()=>setDoc(dA('clientes',tk()),{...pub(),n:5}));
+  await NO('Crear un cliente en una barbería que no existe',()=>setDoc(doc(db,'shops','no-existe-xyz','clientes',tk()),pub()));
+  const t0=tk();T.push(t0);
+  await SI('Crear un cliente válido por el QR de la barbería',()=>setDoc(dA('clientes',t0),pub()));
+  await SI('Crear un cliente válido en la otra barbería de prueba (debe existir y estar activa)',()=>setDoc(dB('clientes',tk()),pub()));
+  await NO('Cambiar los sellos de un cliente',()=>updateDoc(dA('clientes',t0),{n:9}));
+  await NO('Volver a aceptar el aviso de un cliente que ya lo aceptó',()=>updateDoc(dA('clientes',t0),{av:2,avf:serverTimestamp(),mayor:true}));
+  await NO('Borrar un cliente',()=>deleteDoc(dA('clientes',t0)));
+
+  sec('2. Barbero de la primera barbería');
+  await signInWithEmailAndPassword(auth,bE,bP);
+  await SI('Listar los clientes de su barbería',()=>getDocs(cA('clientes')));
+  await NO('Listar clientes de la otra barbería',()=>getDocs(cB('clientes')));
+  await NO('Listar todas las ventas',()=>getDocs(cA('ventas')));
+  await SI('Listar solo sus propias ventas',()=>getDocs(query(cA('ventas'),where('bem','==',bE))));
+  await NO('Leer los cierres',()=>getDocs(cA('cierres')));
+  await NO('Listar administradores',()=>getDocs(cA('admins')));
+  await NO('Listar todas las barberías',()=>getDocs(collection(db,'shops')));
+  await SI('Actualizar los sellos de un cliente',()=>updateDoc(dA('clientes',t0),{n:1,ult:Date.now(),lv:'x',pn:0,pu:0}));
+  await NO('Cambiar el nombre de un cliente',()=>updateDoc(dA('clientes',t0),{nombre:'Hack'}));
+  await NO('Agregar campos que no le tocan a un cliente',()=>updateDoc(dA('clientes',t0),{n:2,extra:1}));
+  await NO('Cambiar el aviso aceptado de un cliente',()=>updateDoc(dA('clientes',t0),{av:2,avf:serverTimestamp(),mayor:true}));
+  await NO('Borrar un cliente',()=>deleteDoc(dA('clientes',t0)));
+  await NO('Cambiar la configuración de la tarjeta',()=>setDoc(dA('config','main'),{aviso:'hack'},{merge:true}));
+  await NO('Invitar a un administrador',()=>setDoc(dA('admins','prueba-b@example.com'),{nombre:'t',rol:'barbero',invitado:1}));
+  await NO('Cerrar un día',()=>setDoc(dA('cierres','2000-01-05'),{fecha:'2000-01-05',total:1}));
+  await NO('Registrar una venta a nombre de otra persona',()=>setDoc(dA('ventas',tk()),venta('otro@x.com','2000-01-02')));
+  await SI('Registrar una venta propia',()=>setDoc(dA('ventas',V),venta(bE,'2000-01-02')));
+  await SI('Deshacer su propia venta',()=>deleteDoc(dA('ventas',V)));
+  await NO('Registrar un cliente con un nivel falso (dueño)',()=>setDoc(dA('clientes',tk()),stf(bE,'dueno')));
+  const t1=tk();T.push(t1);
+  await SI('Registrar un cliente con su nivel real',()=>setDoc(dA('clientes',t1),stf(bE,'barbero')));
+  await NO('Crear una aceptación a nombre de otro correo',()=>setDoc(dA('aceptaciones',tk()),{email:'otro@x.com',nombre:'x',rol:'barbero',version:1,texto:'x',fecha:serverTimestamp(),verificado:false,ua:'x'}));
+  const ac=await getDocs(query(cA('aceptaciones'),where('email','==',bE),limit(1)));
+  if(ac.empty)line(false,'No se encontró una aceptación de términos del barbero para probar su protección. Entra con ese barbero una vez al sitio.');
+  else{await NO('Modificar una aceptación de términos',()=>updateDoc(ac.docs[0].ref,{version:99}));await NO('Borrar una aceptación de términos',()=>deleteDoc(ac.docs[0].ref))}
+
+  sec('3. Dueño de la primera barbería');
+  await signInWithEmailAndPassword(auth,dE,dP);
+  await NO('Listar clientes de la otra barbería',()=>getDocs(cB('clientes')));
+  await NO('Listar todas las barberías',()=>getDocs(collection(db,'shops')));
+  await NO('Listar todas las aceptaciones sin filtro',()=>getDocs(cA('aceptaciones')));
+  await SI('Listar su equipo',()=>getDocs(cA('admins')));
+  await NO('Listar el equipo de la otra barbería',()=>getDocs(cB('admins')));
+  await NO('Crear a otro dueño',()=>setDoc(dA('admins','prueba-dueno@example.com'),{nombre:'t',rol:'dueno',invitado:1}));
+  await SI('Invitar a un barbero',()=>setDoc(dA('admins','prueba-b@example.com'),{nombre:'t',rol:'barbero',invitado:1}));
+  await NO('Subir a ese barbero a dueño',()=>setDoc(dA('admins','prueba-b@example.com'),{nombre:'t',rol:'dueno',invitado:1}));
+  await SI('Quitar a ese barbero',()=>deleteDoc(dA('admins','prueba-b@example.com')));
+  await NO('Quitarse a sí mismo como dueño',()=>deleteDoc(dA('admins',dE)));
+  await SI('Cambiar la configuración de la tarjeta',()=>setDoc(dA('config','main'),{_prueba:Date.now()},{merge:true}));
+  await SI('Quitar la marca de prueba de la configuración',()=>updateDoc(dA('config','main'),{_prueba:deleteField()}));
+  await SI('Cerrar un día',()=>setDoc(dA('cierres','2000-01-03'),{fecha:'2000-01-03',total:1}));
+  await NO('Registrar una venta en un día cerrado',()=>setDoc(dA('ventas',V),venta(dE,'2000-01-03')));
+  await SI('Reabrir el día',()=>deleteDoc(dA('cierres','2000-01-03')));
+  await SI('Registrar la venta con el día reabierto',()=>setDoc(dA('ventas',V),venta(dE,'2000-01-03')));
+  await SI('Borrar esa venta',()=>deleteDoc(dA('ventas',V)));
+  sec('4. Limpieza');
+  for(const t of T)await SI('Borrar el cliente de prueba '+t.slice(0,6),()=>deleteDoc(dA('clientes',t)));
+  await signOut(auth);
+ }catch(e){line(false,'La prueba se detuvo: '+(e.code||e.message)+'. Si es de inicio de sesión, revisa correo y contraseña.');try{await signOut(auth)}catch(x){}}
+ out.insertAdjacentHTML('afterbegin','<h2 class="'+(fail?'ko':'ok')+'">'+pass+' correctas · '+fail+' con problema</h2><p>Toca el ✗ si hay alguno y mándame la captura. En la otra barbería de prueba queda un cliente que borras desde el panel master con Limpiar datos de prueba.</p>');
+ $('#go').disabled=false};
+</script></body></html>
