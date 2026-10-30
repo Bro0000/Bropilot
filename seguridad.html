@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pruebas de seguridad</title>
 <style>body{font:16px/1.4 -apple-system,Arial,sans-serif;max-width:640px;margin:auto;padding:16px;background:#f3f5f8;color:#12202f}input,button{width:100%;padding:12px;margin:4px 0 10px;font:inherit;border-radius:10px;border:1px solid #ccd;box-sizing:border-box}button{background:#c8102e;color:#fff;border:0;font-weight:700}li{margin:5px 0;list-style:none}ul{padding:0}.ok{color:#127a3a}.ko{color:#b00020;font-weight:700}h3{margin:16px 0 4px}</style></head><body>
-<h1>Pruebas de seguridad</h1><p>Usa cuentas de prueba. Las contraseñas no se guardan en ningún lado.</p>
+<h1>Pruebas de seguridad <small style="font-size:14px;color:#667">v2 · 89 pruebas</small></h1><p>Usa cuentas de prueba. Las contraseñas no se guardan en ningún lado.</p>
 <label>Barbería a probar (enlace)</label><input id="b1" value="el-wero">
 <label>Otra barbería de prueba (enlace)</label><input id="b2" value="seguridad-prueba">
 <label>Correo del dueño de la primera</label><input id="de" type="email" autocomplete="off"><label>Contraseña del dueño</label><input id="dp" type="password" autocomplete="off">
@@ -28,6 +28,7 @@ $('#go').onclick=async()=>{
  out.innerHTML='';pass=fail=0;
  const A=$('#b1').value.trim(),B=$('#b2').value.trim(),dE=$('#de').value.trim().toLowerCase(),dP=$('#dp').value,bE=$('#be').value.trim().toLowerCase(),bP=$('#bp').value,mE=$('#me').value.trim().toLowerCase(),mP=$('#mp').value;let CERR=false;
  if(!A||!B||!dE||!dP||!bE||!bP){out.innerHTML='<p class="ko">Llena todos los campos.</p>';return}
+ if([dE,bE].includes('adminbrob@gmail.com')||dE==bE){out.innerHTML='<p class="ko">El dueño y el barbero deben ser cuentas de prueba distintas, y ninguna puede ser la master. La master va solo en los campos de la sección 7.</p>';return}
  $('#go').disabled=true;
  const cA=(...p)=>collection(db,'shops',A,...p),dA=(...p)=>doc(db,'shops',A,...p),cB=(...p)=>collection(db,'shops',B,...p),dB=(...p)=>doc(db,'shops',B,...p);
  const pub=()=>({nombre:'Prueba seguridad',tel:'5500000000',n:0,alta:Date.now(),origen:'cliente',av:1,avf:serverTimestamp(),mayor:true});
