@@ -5,6 +5,7 @@
 <label>Otra barbería de prueba (enlace)</label><input id="b2" value="seguridad-prueba">
 <label>Correo del dueño de la primera</label><input id="de" type="email" autocomplete="off"><label>Contraseña del dueño</label><input id="dp" type="password" autocomplete="off">
 <label>Correo del barbero de la primera</label><input id="be" type="email" autocomplete="off"><label>Contraseña del barbero</label><input id="bp" type="password" autocomplete="off">
+<label>Correo master (opcional, para la sección 7)</label><input id="me" type="email" autocomplete="off"><label>Contraseña master (opcional)</label><input id="mp" type="password" autocomplete="off">
 <button id="go">Ejecutar pruebas</button><div id="out"></div>
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
@@ -25,14 +26,14 @@ const NO=async(l,f)=>{try{await f();line(false,l+' → SE PERMITIÓ y debía blo
 const tk=()=>[...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,'0')).join('');
 $('#go').onclick=async()=>{
  out.innerHTML='';pass=fail=0;
- const A=$('#b1').value.trim(),B=$('#b2').value.trim(),dE=$('#de').value.trim().toLowerCase(),dP=$('#dp').value,bE=$('#be').value.trim().toLowerCase(),bP=$('#bp').value;
+ const A=$('#b1').value.trim(),B=$('#b2').value.trim(),dE=$('#de').value.trim().toLowerCase(),dP=$('#dp').value,bE=$('#be').value.trim().toLowerCase(),bP=$('#bp').value,mE=$('#me').value.trim().toLowerCase(),mP=$('#mp').value;let CERR=false;
  if(!A||!B||!dE||!dP||!bE||!bP){out.innerHTML='<p class="ko">Llena todos los campos.</p>';return}
  $('#go').disabled=true;
  const cA=(...p)=>collection(db,'shops',A,...p),dA=(...p)=>doc(db,'shops',A,...p),cB=(...p)=>collection(db,'shops',B,...p),dB=(...p)=>doc(db,'shops',B,...p);
  const pub=()=>({nombre:'Prueba seguridad',tel:'5500000000',n:0,alta:Date.now(),origen:'cliente',av:1,avf:serverTimestamp(),mayor:true});
  const stf=(em,rol)=>({nombre:'Prueba staff',tel:'5500000001',n:0,alta:Date.now(),origen:'barbero',por:'Prueba',porEmail:em,rolPor:rol,informado:true});
  const venta=(em,f)=>({t:Date.now(),fecha:f,serv:'Corte',precio:1,desc:0,total:1,dis:0,num:1,barbero:'Prueba',bem:em,nombre:'Prueba',cid:'prueba'});
- const T=[],V=tk();
+ const T=[],V=tk(),V2=tk(),tB=tk(),sA=doc(db,'shops',A),sB=doc(db,'shops',B);
  try{
   await signOut(auth);
   sec('1. Sin iniciar sesión');
@@ -50,7 +51,7 @@ $('#go').onclick=async()=>{
   await NO('Crear un cliente en una barbería que no existe',()=>setDoc(doc(db,'shops','no-existe-xyz','clientes',tk()),pub()));
   const t0=tk();T.push(t0);
   await SI('Crear un cliente válido por el QR de la barbería',()=>setDoc(dA('clientes',t0),pub()));
-  await SI('Crear un cliente válido en la otra barbería de prueba (debe existir y estar activa)',()=>setDoc(dB('clientes',tk()),pub()));
+  await SI('Crear un cliente válido en la otra barbería de prueba (debe existir y estar activa)',()=>setDoc(dB('clientes',tB),pub()));
   await NO('Cambiar los sellos de un cliente',()=>updateDoc(dA('clientes',t0),{n:9}));
   await NO('Volver a aceptar el aviso de un cliente que ya lo aceptó',()=>updateDoc(dA('clientes',t0),{av:2,avf:serverTimestamp(),mayor:true}));
   await NO('Borrar un cliente',()=>deleteDoc(dA('clientes',t0)));
@@ -74,7 +75,14 @@ $('#go').onclick=async()=>{
   await NO('Cerrar un día',()=>setDoc(dA('cierres','2000-01-05'),{fecha:'2000-01-05',total:1}));
   await NO('Registrar una venta a nombre de otra persona',()=>setDoc(dA('ventas',tk()),venta('otro@x.com','2000-01-02')));
   await SI('Registrar una venta propia',()=>setDoc(dA('ventas',V),venta(bE,'2000-01-02')));
+  await NO('Renombrar su venta como "Cliente eliminado" (solo el dueño)',()=>updateDoc(dA('ventas',V),{nombre:'Cliente eliminado',cid:'eliminado'}));
+  await NO('Cambiar el total de su venta',()=>updateDoc(dA('ventas',V),{total:999}));
   await SI('Deshacer su propia venta',()=>deleteDoc(dA('ventas',V)));
+  await NO('Registrar una venta en la otra barbería',()=>setDoc(dB('ventas',tk()),venta(bE,'2000-01-02')));
+  await NO('Sumar sellos a un cliente de la otra barbería',()=>updateDoc(dB('clientes',tB),{n:1,ult:Date.now(),lv:'x',pn:0,pu:0}));
+  await NO('Registrar una visita en la otra barbería',()=>setDoc(dB('clientes',tB,'visitas',tk()),{t:Date.now(),serv:'Corte',total:1,bem:bE}));
+  await NO('Crear un cliente en la otra barbería',()=>setDoc(dB('clientes',tk()),stf(bE,'barbero')));
+  await NO('Cerrar las inscripciones por QR (solo el dueño)',()=>updateDoc(sA,{inscripciones:false}));
   await NO('Registrar un cliente con un nivel falso (dueño)',()=>setDoc(dA('clientes',tk()),stf(bE,'dueno')));
   const t1=tk();T.push(t1);
   await SI('Registrar un cliente con su nivel real',()=>setDoc(dA('clientes',t1),stf(bE,'barbero')));
@@ -101,11 +109,46 @@ $('#go').onclick=async()=>{
   await NO('Registrar una venta en un día cerrado',()=>setDoc(dA('ventas',V),venta(dE,'2000-01-03')));
   await SI('Reabrir el día',()=>deleteDoc(dA('cierres','2000-01-03')));
   await SI('Registrar la venta con el día reabierto',()=>setDoc(dA('ventas',V),venta(dE,'2000-01-03')));
+  await NO('Cambiar el total de una venta',()=>updateDoc(dA('ventas',V),{total:999}));
+  await SI('Renombrar una venta como "Cliente eliminado"',()=>updateDoc(dA('ventas',V),{nombre:'Cliente eliminado',cid:'eliminado'}));
   await SI('Borrar esa venta',()=>deleteDoc(dA('ventas',V)));
+  await NO('Cambiar otros datos de su barbería (nombre, estado)',()=>updateDoc(sA,{_prueba:1}));
+  await NO('Cambiar las inscripciones de la otra barbería',()=>updateDoc(sB,{inscripciones:false}));
+  await NO('Poner un valor no válido en inscripciones',()=>updateDoc(sA,{inscripciones:'no'}));
+  await SI('Cerrar las inscripciones por QR',async()=>{await updateDoc(sA,{inscripciones:false});CERR=true});
+
+  sec('5. Sin sesión, con inscripciones cerradas');
+  await signOut(auth);
+  await NO('Crear un cliente por el QR con inscripciones cerradas',()=>setDoc(dA('clientes',tk()),pub()));
+  await SI('Leer una tarjeta que ya existe',()=>getDoc(dA('clientes',t0)));
+  await NO('Cliente pendiente: aceptar el aviso y sumarse sellos',()=>updateDoc(dA('clientes',t1),{av:1,avf:serverTimestamp(),mayor:true,n:5}));
+  await NO('Cliente pendiente: aceptar sin confirmar mayoría de edad',()=>updateDoc(dA('clientes',t1),{av:1,avf:serverTimestamp(),mayor:false}));
+  await NO('Cliente pendiente: aceptar con una fecha falsa',()=>updateDoc(dA('clientes',t1),{av:1,avf:new Date(2000,0,1),mayor:true}));
+  await SI('Cliente pendiente: aceptar su aviso',()=>updateDoc(dA('clientes',t1),{av:1,avf:serverTimestamp(),mayor:true}));
+  await NO('Cliente: volver a aceptar o cambiar su aviso',()=>updateDoc(dA('clientes',t1),{av:2,avf:serverTimestamp(),mayor:true}));
+
+  sec('6. Dueño: volver a abrir inscripciones');
+  await signInWithEmailAndPassword(auth,dE,dP);
+  await SI('Volver a abrir las inscripciones por QR',async()=>{await updateDoc(sA,{inscripciones:true});CERR=false});
   sec('4. Limpieza');
   for(const t of T)await SI('Borrar el cliente de prueba '+t.slice(0,6),()=>deleteDoc(dA('clientes',t)));
   await signOut(auth);
+  if(mE&&mP){
+   sec('7. Panel master');
+   await signInWithEmailAndPassword(auth,mE,mP);
+   await SI('Listar todas las barberías',()=>getDocs(collection(db,'shops')));
+   await SI('Listar aceptaciones de términos',()=>getDocs(cA('aceptaciones')));
+   await SI('Listar clientes de la otra barbería',()=>getDocs(cB('clientes')));
+   await SI('Listar todas las ventas',()=>getDocs(cA('ventas')));
+   await SI('Leer los cierres',()=>getDocs(cA('cierres')));
+   await SI('Cambiar la configuración de la otra barbería',()=>setDoc(dB('config','main'),{_prueba:Date.now()},{merge:true}));
+   await SI('Quitar esa marca de prueba',()=>updateDoc(dB('config','main'),{_prueba:deleteField()}));
+   await SI('Borrar el cliente de prueba de la otra barbería',()=>deleteDoc(dB('clientes',tB)));
+   await NO('Modificar una aceptación de términos (ni el master puede)',async()=>{const a=await getDocs(query(cA('aceptaciones'),limit(1)));if(a.empty)throw{code:'permission-denied'};await updateDoc(a.docs[0].ref,{version:99})});
+   await signOut(auth);
+  }else line(true,'Sección 7 (master) omitida: no escribiste sus datos');
  }catch(e){line(false,'La prueba se detuvo: '+(e.code||e.message)+'. Si es de inicio de sesión, revisa correo y contraseña.');try{await signOut(auth)}catch(x){}}
- out.insertAdjacentHTML('afterbegin','<h2 class="'+(fail?'ko':'ok')+'">'+pass+' correctas · '+fail+' con problema</h2><p>Toca el ✗ si hay alguno y mándame la captura. En la otra barbería de prueba queda un cliente que borras desde el panel master con Limpiar datos de prueba.</p>');
+ if(CERR){try{await signInWithEmailAndPassword(auth,dE,dP);await updateDoc(doc(db,'shops',A),{inscripciones:true});await signOut(auth);line(true,'Inscripciones vueltas a abrir tras la falla')}catch(x){line(false,'LAS INSCRIPCIONES QUEDARON CERRADAS. Ábrelas en Tarjeta → Registro y privacidad')}}
+ out.insertAdjacentHTML('afterbegin','<h2 class="'+(fail?'ko':'ok')+'">'+pass+' correctas · '+fail+' con problema</h2><p>Toca el ✗ si hay alguno y mándame la captura. '+(mE?'':'En la otra barbería de prueba queda un cliente que borras desde el panel master con Limpiar datos de prueba.')+'</p>');
  $('#go').disabled=false};
 </script></body></html>
