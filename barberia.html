@@ -157,7 +157,7 @@ function regTab(){
  $('#b').innerHTML=`<button id="sc">Escanear QR</button><input id="q" placeholder="Buscar por nombre o teléfono" aria-label="Buscar cliente"><div id="ls"></div><button class="s" id="nw">Nuevo cliente</button><div id="pn"></div>`;
  $('#q').oninput=()=>{const q=$('#q').value.toLowerCase().trim();$('#ls').innerHTML=q.length<2?'':CL.filter(c=>((c.nombre||'')+(c.tel||'')).toLowerCase().includes(q)).slice(0,8).map(c=>`<div class="row" data-id="${c.id}" tabindex="0"><span>${esc(c.nombre)}</span><span class="m">${c.n||0}/10</span></div>`).join('');document.querySelectorAll('.row[data-id]').forEach(r=>r.onclick=()=>pick(r.dataset.id))};
  $('#sc').onclick=scan;$('#nw').onclick=newC}
-const PAGOS=['Efectivo','Tarjeta','Transferencia','Otro'],pgN=v=>v.pago||'Sin dato',pgC=s=>s=='Efectivo'?'Efec.':s=='Tarjeta'?'Tarj.':s=='Transferencia'?'Transf.':s=='Sin dato'?'s/d':'Otro';let PG='';
+const PAGOS=['Efectivo','Tarjeta','Transferencia','Otro'],pgN=v=>v.pago||'Sin dato',pgC=s=>s=='Efectivo'?'Efec.':s=='Tarjeta'?'Tarj.':s=='Transferencia'?'Transf.':s=='Sin dato'?'s/d':s;let PG='';
 function pick(id){
  const c=CL.find(x=>x.id==id);if(!c)return alert('Esa tarjeta no está en tu lista. Recarga la página.');
  const num=(c.n||0)+1,dc=num==5?.2:num==10?.5:0;
@@ -227,7 +227,7 @@ async function resTab(sel){
  document.querySelectorAll('[data-x]').forEach(x=>x.onclick=()=>{HID[x.dataset.x]=1;x.closest('.nt').remove()});document.querySelectorAll('[data-g]').forEach(x=>x.onclick=e=>{e.preventDefault();GOTO={p:'d',f:x.dataset.g,b:''};tab('s')});
  $('#pp').onchange=$('#pf').onchange=()=>go(true);if($('#pb'))$('#pb').onchange=()=>go(false);
  $('#rd').onclick=async()=>{if($('#rq')&&$('#rq').value=='b'){$('#rd').disabled=true;await respaldoXlsx();return resTab(sel)}const nom=$('#rn').checked,xl=$('#rf').value=='x',tit=(SH.nombre||B)+' · '+(rg?d1:d1+' a '+d2)+(sel.b?' · '+sel.b:(dueno?'':' · '+NOM)),
-  det=vs.map(v=>({f:v.fecha,h:hora(v.t),c:v.nombre,s:v.serv,d:Math.round((v.desc||0)*100),dis:v.dis||0,t:v.total+(v.dis||0),b:v.barbero||'',p:pgN(v)})),T={tot,dsc,dt,dn:dn.length,n:vs.length,pf:PFo},fn='reporte-'+B+'-'+d1+(rg?'':'-a-'+d2)+(xl?'.xlsx':'.pdf'),pbx=dueno&&!sel.b?PB:null;
+  det=vs.map(v=>({f:v.fecha,h:hora(v.t),h24:new Date(v.t).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:false}),c:v.nombre,s:v.serv,d:Math.round((v.desc||0)*100),dis:v.dis||0,t:v.total+(v.dis||0),b:v.barbero||'',p:pgN(v)})),T={tot,dsc,dt,dn:dn.length,n:vs.length,pf:PFo},fn='reporte-'+B+'-'+d1+(rg?'':'-a-'+d2)+(xl?'.xlsx':'.pdf'),pbx=dueno&&!sel.b?PB:null;
   try{xl?await repXlsx(tit,keys,S,pbx,det,T,nom,fn):await repPdf(tit,keys,S,pbx,det,T,nom,fn)}catch(e){alert('No se pudo crear el reporte: '+(e.code||e.message))}};
  if($('#cr'))$('#cr').onclick=async()=>{if(!confirm('¿Cerrar el turno del '+d1+' con $'+tot+'? Después no se podrán registrar ni deshacer visitas de ese día.'))return;try{await setDoc(doc(db,'shops',B,'cierres',d1),{fecha:d1,visitas:vs.length,total:tot,descuentos:dsc,porServicio:S,porBarbero:PB,porPago:PFo,disenos:{n:dn.length,total:dt},cerrado:Date.now(),por:NOM});await estado();delete HID.ult;delete HID.pend;resTab(sel)}catch(e){$('#er').textContent='No se guardó: '+e.code}};
  if($('#ro'))$('#ro').onclick=async()=>{if(!confirm('¿Reabrir el día '+d1+'?'))return;try{await deleteDoc(doc(db,'shops',B,'cierres',d1));await estado();delete HID.ult;delete HID.pend;resTab(sel)}catch(e){$('#er').textContent='No se pudo reabrir: '+e.code}}}
@@ -279,16 +279,16 @@ async function pend(){if(ROL!='dueno')return'';const y=new Date(Date.now()-864e5
 function loadPdf(){return new Promise((ok,no)=>{if(window.jspdf)return ok();const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';s.onload=ok;s.onerror=()=>no(new Error('No cargó la librería de PDF. Revisa tu conexión.'));document.head.append(s)})}
 async function repPdf(tit,keys,S,PB,det,T,nom,fn){
  await loadPdf();const D=new window.jspdf.jsPDF({unit:'mm',format:'letter'}),c=s=>String(s==null?'':s).replace(/[^\u0000-\u00FF]/g,'');let y=18;
- const row=(cols,xs,b,sz)=>{if(y>262){D.addPage();y=18}D.setFont('helvetica',b?'bold':'normal');D.setFontSize(sz||10);cols.forEach((v,i)=>D.text(c(v),xs[i],y,{maxWidth:(xs[i+1]||203)-xs[i]-2}));y+=(sz||10)>12?8:5.5};
+ const row=(cols,xs,b,sz)=>{const z=sz||10;D.setFont('helvetica',b?'bold':'normal');D.setFontSize(z);const L=cols.map((v,i)=>cols.length>1?D.splitTextToSize(c(v),(xs[i+1]||203)-xs[i]-2):[c(v)]),lh=z*.42,h=Math.max(...L.map(l=>l.length))*lh;if(y+h>268){D.addPage();y=18}L.forEach((l,i)=>D.text(l,xs[i],y,{lineHeightFactor:1.15}));y+=Math.max(h,lh)+(z>12?3.5:1.6)};
  row([tit],[15],1,15);row(['Generado: '+new Date().toLocaleString('es-MX')],[15],0,9);y+=3;
  row(['Total cobrado: $'+T.tot],[15],1,13);row(['Visitas: '+T.n+'    Descuentos dados: $'+T.dsc+'    Diseños: '+T.dn+' ($'+T.dt+')'],[15],0);y+=3;
  row(['Por servicio','Cantidad','Dinero'],[15,110,140],1);keys.forEach(k=>row([k,(S[k]||{n:0}).n,'$'+(S[k]||{m:0}).m],[15,110,140]));
  if(T.pf&&Object.keys(T.pf).length){y+=3;row(['Por forma de pago','Visitas','Dinero'],[15,110,140],1);Object.entries(T.pf).forEach(([k,v])=>row([k,v.n,'$'+v.m],[15,110,140]))}
  if(PB){y+=3;row(['Por barbero','Visitas','Dinero'],[15,110,140],1);Object.entries(PB).forEach(([k,v])=>row([k,v.n,'$'+v.m],[15,110,140]))}
- y+=4;row(['Detalle'],[15],1,12);const xs=nom?[15,32,45,80,112,124,140,156,172]:[15,34,48,96,110,126,142,162];
- row(nom?['Fecha','Hora','Cliente','Servicio','Dto','Diseño','Total','Pago','Barbero']:['Fecha','Hora','Servicio','Dto','Diseño','Total','Pago','Barbero'],xs,1);
- det.forEach(x=>row(nom?[x.f,x.h,x.c,x.s,x.d+'%','$'+x.dis,'$'+x.t,pgC(x.p),x.b]:[x.f,x.h,x.s,x.d+'%','$'+x.dis,'$'+x.t,pgC(x.p),x.b],xs));
- if(det.length)row(['Pago: Efec. = efectivo, Tarj. = tarjeta, Transf. = transferencia, s/d = sin dato (visitas anteriores).'],[15],0,8);
+ y+=4;row(['Detalle'],[15],1,12);const xs=nom?[15,31,42,80,114,125,140,155,173]:[15,31,42,90,102,118,134,155],fd=s=>s?s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(2,4):'';
+ row(nom?['Fecha','Hora','Cliente','Servicio','Dto','Diseño','Total','Pago','Barbero']:['Fecha','Hora','Servicio','Dto','Diseño','Total','Pago','Barbero'],xs,1,9);
+ det.forEach(x=>row(nom?[fd(x.f),x.h24,x.c,x.s,x.d+'%','$'+x.dis,'$'+x.t,pgC(x.p),x.b]:[fd(x.f),x.h24,x.s,x.d+'%','$'+x.dis,'$'+x.t,pgC(x.p),x.b],xs,0,9));
+ if(det.length)y+=2;row(['Pago: Efec. = efectivo, Tarj. = tarjeta, Transf. = transferencia, s/d = sin dato (visitas anteriores). Hora en formato de 24 h.'],[15],0,8);
  if(!det.length)row(['Sin visitas en este periodo.'],[15]);D.save(fn)}
 async function repXlsx(tit,keys,S,PB,det,T,nom,fn){
  await loadXlsx();const r=[['Reporte',tit],['Total cobrado',T.tot],['Visitas',T.n],['Descuentos dados',T.dsc],['Diseños (cantidad)',T.dn],['Diseños (dinero)',T.dt],[],['Servicio','Cantidad','Dinero']];
