@@ -43,6 +43,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left;min-height:1.2em}
 .f2{display:flex;gap:10px}.f2>div{flex:1;min-width:0}
 #pf{width:auto;min-width:190px}
 input[type=date]{-webkit-appearance:none;appearance:none;display:block;width:auto;min-width:0;max-width:220px;min-height:46px;text-align:left}input[type=date]::-webkit-date-and-time-value{text-align:left}
+.dw{width:220px;max-width:100%;border:1px solid var(--l);border-radius:10px;overflow:hidden;background:var(--bg);margin:4px 0 10px}.dw input[type=date]{display:block;width:100%!important;min-width:0;max-width:none!important;border:0!important;margin:0!important;border-radius:0;background:transparent;-webkit-appearance:none;appearance:none;min-height:46px;text-align:left}
 </style>
 <script>function L(u,f){var s=document.createElement('script');s.src=u;s.onerror=f;document.head.appendChild(s)}
 L('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js',function(){L('https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js')});
@@ -207,7 +208,7 @@ async function resTab(sel){
  const S={},PB={};vs.forEach(v=>{const o=S[v.serv]=S[v.serv]||{n:0,m:0};o.n++;o.m+=v.total;const q=PB[v.barbero||'—']=PB[v.barbero||'—']||{n:0,m:0};q.n++;q.m+=v.total+(v.dis||0)});
  const dn=vs.filter(v=>v.dis>0),dt=dn.reduce((a,v)=>a+v.dis,0),tot=vs.reduce((a,v)=>a+v.total+(v.dis||0),0),dsc=vs.reduce((a,v)=>a+Math.round(v.precio-v.total),0),keys=[...new Set([...Object.keys(cf.precios),...Object.keys(S)])],rg=d1==d2;
  const go=r=>resTab({p:$('#pp').value,f:$('#pf').value||sel.f,b:r?'':(dueno&&$('#pb')?$('#pb').value:'')});
- $('#b').innerHTML=`${avisos()}<div class="card"><label for="pp">Periodo</label><select id="pp">${[['d','Día'],['s','Semana (lun–dom)'],['m','Mes']].filter(x=>dueno||x[0]=='d').map(([k,n])=>`<option value="${k}" ${k==sel.p?'selected':''}>${n}</option>`).join('')}</select><label for="pf">Fecha</label><input id="pf" type="date" value="${sel.f}">${dueno?`<label for="pb">Barbero</label><select id="pb"><option value="">Todos</option>${bs.map(x=>`<option ${x==sel.b?'selected':''}>${esc(x)}</option>`).join('')}</select>`:''}</div>
+ $('#b').innerHTML=`${avisos()}<div class="card"><label for="pp">Periodo</label><select id="pp">${[['d','Día'],['s','Semana (lun–dom)'],['m','Mes']].filter(x=>dueno||x[0]=='d').map(([k,n])=>`<option value="${k}" ${k==sel.p?'selected':''}>${n}</option>`).join('')}</select><label for="pf">Fecha</label><div class="dw"><input id="pf" type="date" value="${sel.f}"></div>${dueno?`<label for="pb">Barbero</label><select id="pb"><option value="">Todos</option>${bs.map(x=>`<option ${x==sel.b?'selected':''}>${esc(x)}</option>`).join('')}</select>`:''}</div>
  <div class="card hero"><b>${dueno?'':'Mis cobros · '}${rg?d1:d1+' a '+d2}</b><div class="n">$${tot}</div><p class="m">${vs.length} ${vs.length==1?'visita':'visitas'} · descuentos dados $${dsc}</p></div>
  <div class="tiles">${keys.map(k=>`<div class="tile"><span class="m">${esc(k)}</span><b>${(S[k]||{n:0}).n}</b><span class="m">$${(S[k]||{m:0}).m}</span></div>`).join('')}<div class="tile"><span class="m">Diseños</span><b>${dn.length}</b><span class="m">$${dt}</span></div></div>
  ${dueno&&!sel.b?`<div class="card"><b>Por barbero</b>${Object.entries(PB).map(([k,v])=>`<div class="row"><span>${esc(k)}</span><span>${v.n} · $${v.m}</span></div>`).join('')||'<p class="m">Sin visitas.</p>'}</div>`:''}
@@ -227,7 +228,7 @@ function prTab(){
   $('#ad').onclick=()=>{rd();const n=$('#nn').value.trim();if(!n||p[n]!==undefined)return $('#er').textContent='Escribe un nombre nuevo.';p[n]=Math.max(0,+$('#np').value||0);dr()};
   $('#gp').onclick=async()=>{rd();try{await setDoc(cfgRef,{precios:p},{mergeFields:['precios']});cf.precios=p;$('#er').textContent='Precios guardados.'}catch(e){$('#er').textContent='No se guardó: '+e.code}}};dr()}
 function cfgTab(){
- const dt=(id,l,v)=>`<label for="${id}">${l}</label><input id="${id}" type="date" value="${esc(v||'')}">`,
+ const dt=(id,l,v)=>`<label for="${id}">${l}</label><div class="dw"><input id="${id}" type="date" value="${esc(v||'')}"></div>`,
  cl=(id,l,v,d)=>`<label for="${id}">${l}</label><input id="${id}" type="color" style="height:46px;padding:4px" value="${okC(v)?v:d}">`,
  cc={c1:cf.c1||'',c2:cf.c2||'',fondo:cf.fondo||'',cb:cf.cb||''};let lg=cf.logo||'';
  $('#b').innerHTML=`<div class="card"><b>Vista previa (así lo ve el cliente)</b><label for="pn5" class="m">Sellos de ejemplo</label><input id="pn5" type="range" min="0" max="10" value="4"><div id="pv"></div><p class="m" id="vst"></p></div>
